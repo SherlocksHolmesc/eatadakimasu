@@ -123,11 +123,14 @@ backend:
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented room creation with unique codes, supports solo and group modes"
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Both solo and group room creation working perfectly. Generated unique 6-character room codes (611N64, E8HA9A). API returns correct mode and room_code in response."
   
   - task: "Room joining"
     implemented: true
