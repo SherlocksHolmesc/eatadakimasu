@@ -1,0 +1,25 @@
+{
+  "name": "eatadakimasu",
+  "version": "1.0.0",
+  "description": "Eatadakimasu - Full stack food recommendation app",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "install-frontend": "cd frontend && npm install",
+    "start-frontend": "cd frontend && npm start",
+    "start": "cd frontend && npm start",
+    "install-backend": "cd backend && pip install -r requirements.txt"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "convex": "^1.30.0",
+    "expo": "^54.0.27"
+  },
+  "devDependencies": {
+    "@types/react": "~19.1.10",
+    "typescript": "~5.9.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
