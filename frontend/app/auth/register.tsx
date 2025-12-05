@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function RegisterScreen() {
@@ -12,8 +10,6 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const registerMutation = useMutation(api.auth.register);
 
   const handleRegister = async () => {
     if (!username.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
@@ -33,16 +29,13 @@ export default function RegisterScreen() {
 
     setIsLoading(true);
     try {
-      const result = await registerMutation({
-        username: username.trim(),
-        email: email.toLowerCase().trim(),
-        password,
-      });
+      // For now, create a temporary user (auth can be added later)
+      const userId = `user_${Math.random().toString(36).substr(2, 9)}`;
 
       // Store user data
-      await AsyncStorage.setItem('userId', result.userId);
-      await AsyncStorage.setItem('username', result.username);
-      await AsyncStorage.setItem('email', result.email);
+      await AsyncStorage.setItem('userId', userId);
+      await AsyncStorage.setItem('username', username.trim());
+      await AsyncStorage.setItem('email', email.toLowerCase().trim());
 
       Alert.alert('Success', 'Account created successfully!', [
         {

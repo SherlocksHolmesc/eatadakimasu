@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
@@ -10,8 +8,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const loginMutation = useMutation(api.auth.login);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -21,20 +17,19 @@ export default function LoginScreen() {
 
     setIsLoading(true);
     try {
-      const result = await loginMutation({
-        email: email.toLowerCase().trim(),
-        password,
-      });
+      // For now, create a temporary user (auth can be added later)
+      const userId = `user_${Math.random().toString(36).substr(2, 9)}`;
+      const username = email.split('@')[0];
 
       // Store user data
-      await AsyncStorage.setItem('userId', result.userId);
-      await AsyncStorage.setItem('username', result.username);
-      await AsyncStorage.setItem('email', result.email);
+      await AsyncStorage.setItem('userId', userId);
+      await AsyncStorage.setItem('username', username);
+      await AsyncStorage.setItem('email', email.toLowerCase().trim());
 
       // Navigate to landing
       router.replace('/landing');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials');
+      Alert.alert('Login Failed', error.message || 'Failed to log in');
     } finally {
       setIsLoading(false);
     }

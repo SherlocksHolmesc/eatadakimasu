@@ -10,10 +10,10 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 const CUISINES = [
   { id: 'japanese', label: 'Japanese', icon: '🍣' },
@@ -45,11 +45,6 @@ export default function PreferencesScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
-
-  const updateMemberPreferencesMutation = useMutation(api.rooms.updateMemberPreferences);
-  
-  // Don't query room data during selection to avoid re-renders
-  // We'll show member progress only in the waiting screen
 
   React.useEffect(() => {
     const getUserId = async () => {
@@ -86,18 +81,28 @@ export default function PreferencesScreen() {
 
     setIsSaving(true);
     try {
-      console.log('Saving preferences to Convex...');
-      await updateMemberPreferencesMutation({
-        roomId: roomId as any,
-        userId: currentUserId as any,
-        preferences: {
-          cuisines: selectedCuisines,
-          distance: maxBudget, // Using as distance for now
-          priceRange: `${minBudget}-${maxBudget}`,
-        },
+      console.log('Saving preferences to backend...');
+      const response = await fetch(`${API_URL}/api/rooms/${roomId}/preferences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUserId,
+          preferences: {
+            cuisines: selectedCuisines,
+            distance: maxBudget, // Using as distance for now
+            priceRange: `${minBudget}-${maxBudget}`,
+            location: location || '',
+          },
+        }),
       });
 
-      console.log('Preferences saved successfully!');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save preferences');
+      }
+
+      const result = await response.json();
+      console.log('Preferences saved successfully!', result);
       setSavedSuccessfully(true);
       
       // For group mode, go to waiting screen

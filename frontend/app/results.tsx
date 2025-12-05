@@ -39,9 +39,31 @@ export default function ResultsScreen() {
 
   const fetchResults = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/results/${roomCode}?mode=${mode}`);
-      const data = await response.json();
-      setResults(data.results || []);
+      // Get roomId from params
+      const roomId = params.roomId as string;
+      if (roomId) {
+        const response = await fetch(`${API_URL}/api/rooms/${roomId}/results`);
+        if (response.ok) {
+          const data = await response.json();
+          // Map results to restaurant format - need to fetch restaurant details
+          // For now, use mock data to get restaurant details
+          const restaurants = data.results?.map((r: any) => {
+            // In a real app, you'd fetch restaurant details by ID
+            // For now, return basic info
+            return {
+              id: r.restaurantId,
+              vote_count: r.score,
+              name: `Restaurant ${r.restaurantId}`,
+              cuisine: 'Unknown',
+              rating: 4.0,
+              price_range: '$$',
+              address: 'Address not available',
+              photo: 'https://via.placeholder.com/400'
+            };
+          }) || [];
+          setResults(restaurants);
+        }
+      }
     } catch (error) {
       console.error('Fetch results error:', error);
       Alert.alert('Error', 'Failed to load results');

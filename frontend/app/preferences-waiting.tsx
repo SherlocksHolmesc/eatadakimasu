@@ -1,42 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useQuery } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 export default function PreferencesWaitingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { roomCode, roomId, mode } = params;
 
-  // Real-time query - automatically updates when members save preferences
-  const roomData = useQuery(api.rooms.getRoom, 
-    roomCode ? { roomCode: roomCode as string } : 'skip'
-  );
+  const [roomData, setRoomData] = useState<any>(null);
+  const [hasNavigated, setHasNavigated] = useState(false);
+
+  // Poll for room data
+  useEffect(() => {
+    if (!roomCode) return;
+
+    const fetchRoomData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/rooms/${roomCode}`);
+        if (response.ok) {
+          const data = await response.json();
+          setRoomData(data);
+
+          // Check if all members have set their preferences
+          const allMembersReady = data.members && data.members.every((m: any) => m.preferences);
+          
+          // Auto-navigate when everyone is done
+          if (allMembersReady && !hasNavigated) {
+            console.log('All members have set preferences! Navigating to swipe...');
+            setHasNavigated(true);
+            setTimeout(() => {
+              router.push({
+                pathname: '/swipe',
+                params: {
+                  roomCode,
+                  roomId: data.id,
+                  mode,
+                },
+              });
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching room data:', error);
+      }
+    };
+
+    fetchRoomData();
+    const interval = setInterval(fetchRoomData, 2000); // Poll every 2 seconds
+    return () => clearInterval(interval);
+  }, [roomCode, hasNavigated]);
 
   // Check if all members have set their preferences
-  const allMembersReady = React.useMemo(() => {
-    if (!roomData || !roomData.members) return false;
-    return roomData.members.every((m: any) => m.preferences);
-  }, [roomData]);
-
-  // Auto-navigate when everyone is done
-  React.useEffect(() => {
-    if (allMembersReady && roomData) {
-      console.log('All members have set preferences! Navigating to swipe...');
-      // Small delay to show "Everyone's ready!" message
-      setTimeout(() => {
-        router.push({
-          pathname: '/swipe',
-          params: {
-            roomCode,
-            roomId,
-            mode,
-          },
-        });
-      }, 2000);
-    }
-  }, [allMembersReady]);
+  const allMembersReady = roomData?.members?.every((m: any) => m.preferences) || false;
 
   if (!roomData) {
     return (

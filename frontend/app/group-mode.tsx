@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 export default function GroupModeScreen() {
   const router = useRouter();
@@ -11,21 +11,31 @@ export default function GroupModeScreen() {
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-
-  const createRoomMutation = useMutation(api.rooms.createRoom);
-  const joinRoomMutation = useMutation(api.rooms.joinRoom);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get logged-in user ID
-    const getUserId = async () => {
+    // Get logged-in user ID and username
+    const getUserData = async () => {
       const id = await AsyncStorage.getItem('userId');
+      const name = await AsyncStorage.getItem('username');
       setUserId(id);
+      setUsername(name);
+      
+      // If no user, create a temporary one
+      if (!id) {
+        const tempId = `user_${Math.random().toString(36).substr(2, 9)}`;
+        const tempName = 'User' + Math.floor(Math.random() * 1000);
+        await AsyncStorage.setItem('userId', tempId);
+        await AsyncStorage.setItem('username', tempName);
+        setUserId(tempId);
+        setUsername(tempName);
+      }
     };
-    getUserId();
+    getUserData();
   }, []);
 
   const createRoom = async () => {
-    if (!userId) {
+    if (!userId || !username) {
       Alert.alert('Error', 'Please log in first');
       router.push('/auth/login');
       return;
@@ -33,10 +43,22 @@ export default function GroupModeScreen() {
 
     setIsCreating(true);
     try {
-      const result = await createRoomMutation({
-        userId: userId as any,
-        mode: 'group',
+      const response = await fetch(`${API_URL}/api/rooms/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          username,
+          mode: 'group'
+        })
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create room');
+      }
+
+      const result = await response.json();
 
       // Navigate to a waiting room screen with the room code
       router.push({
@@ -61,7 +83,7 @@ export default function GroupModeScreen() {
       return;
     }
 
-    if (!userId) {
+    if (!userId || !username) {
       Alert.alert('Error', 'Please log in first');
       router.push('/auth/login');
       return;
@@ -69,10 +91,22 @@ export default function GroupModeScreen() {
 
     setIsJoining(true);
     try {
-      const result = await joinRoomMutation({
-        userId: userId as any,
-        roomCode: roomCode.toUpperCase(),
+      const response = await fetch(`${API_URL}/api/rooms/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomCode: roomCode.toUpperCase(),
+          userId,
+          username
+        })
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Room not found');
+      }
+
+      const result = await response.json();
 
       // Navigate to waiting room
       router.push({
@@ -80,7 +114,7 @@ export default function GroupModeScreen() {
         params: { 
           roomCode: result.roomCode,
           roomId: result.roomId,
-          mode: 'group' 
+          mode: result.mode || 'group' 
         }
       });
     } catch (error: any) {

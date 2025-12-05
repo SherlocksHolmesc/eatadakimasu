@@ -13,9 +13,9 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SWIPE_THRESHOLD = 120;
@@ -40,8 +40,26 @@ export default function SwipeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
-  const [userId] = useState(`user_${Math.random().toString(36).substr(2, 9)}`);
+  const [userId, setUserId] = useState<string>('');
+  const [roomId, setRoomId] = useState<string>('');
   const [votedRestaurants, setVotedRestaurants] = useState<string[]>([]);
+
+  useEffect(() => {
+    const getUserData = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      if (id) {
+        setUserId(id);
+      } else {
+        const tempId = `user_${Math.random().toString(36).substr(2, 9)}`;
+        await AsyncStorage.setItem('userId', tempId);
+        setUserId(tempId);
+      }
+    };
+    getUserData();
+    if (params.roomId) {
+      setRoomId(params.roomId as string);
+    }
+  }, []);
 
   const position = useRef(new Animated.ValueXY()).current;
   const rotate = position.x.interpolate({
@@ -68,20 +86,32 @@ export default function SwipeScreen() {
 
   const fetchRestaurants = async () => {
     try {
-      const cuisineList = typeof cuisines === 'string' ? cuisines.split(',') : [cuisines];
-      const response = await fetch(`${API_URL}/api/restaurants`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cuisines: cuisineList,
-          min_budget: parseInt(minBudget as string),
-          max_budget: parseInt(maxBudget as string),
-          location: location,
-        }),
-      });
+      if (roomId) {
+        // Group mode - get restaurants from room
+        const response = await fetch(`${API_URL}/api/rooms/${roomId}/restaurants`);
+        if (response.ok) {
+          const data = await response.json();
+          setRestaurants(data || []);
+        }
+      } else {
+        // Solo mode - use preferences from params
+        const cuisineList = typeof cuisines === 'string' ? cuisines.split(',') : [cuisines];
+        const response = await fetch(`${API_URL}/api/restaurants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cuisines: cuisineList,
+            min_budget: parseInt(minBudget as string) || 10,
+            max_budget: parseInt(maxBudget as string) || 50,
+            location: location || '',
+          }),
+        });
 
-      const data = await response.json();
-      setRestaurants(data.restaurants || []);
+        if (response.ok) {
+          const data = await response.json();
+          setRestaurants(data.restaurants || []);
+        }
+      }
     } catch (error) {
       console.error('Fetch restaurants error:', error);
       Alert.alert('Error', 'Failed to load restaurants');
@@ -90,20 +120,22 @@ export default function SwipeScreen() {
     }
   };
 
-  const submitVote = async (restaurantId: string, vote: 'yes' | 'no') => {
+  const submitVote = async (restaurantId: string, vote: 'like' | 'dislike') => {
+    if (!roomId || !userId) return;
+    
     try {
       await fetch(`${API_URL}/api/votes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          room_code: roomCode,
-          user_id: userId,
-          restaurant_id: restaurantId,
-          vote: vote,
+          roomId,
+          userId,
+          restaurantId,
+          vote: vote === 'yes' ? 'like' : 'dislike',
         }),
       });
 
-      if (vote === 'yes') {
+      if (vote === 'like') {
         setVotedRestaurants([...votedRestaurants, restaurantId]);
       }
     } catch (error) {
@@ -148,7 +180,7 @@ export default function SwipeScreen() {
   const onSwipeComplete = (direction: 'left' | 'right') => {
     const restaurant = restaurants[currentIndex];
     if (restaurant) {
-      submitVote(restaurant.id, direction === 'right' ? 'yes' : 'no');
+      submitVote(restaurant.id, direction === 'right' ? 'like' : 'dislike');
     }
 
     position.setValue({ x: 0, y: 0 });

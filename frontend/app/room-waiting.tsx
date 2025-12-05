@@ -1,33 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 export default function RoomWaitingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { roomCode, roomId } = params;
 
-  const [currentUserId, setCurrentUserId] = React.useState<string>('');
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [roomData, setRoomData] = useState<any>(null);
+  const [isHost, setIsHost] = useState(false);
+  const [hasNavigated, setHasNavigated] = useState(false);
 
-  // Real-time query - automatically updates when members join/leave
-  const roomData = useQuery(api.rooms.getRoom, 
-    roomCode ? { roomCode: roomCode as string } : 'skip'
-  );
-
-  // Debug: Log roomData changes
-  React.useEffect(() => {
-    console.log('=== ROOM DATA CHANGED ===');
-    console.log('Full roomData:', JSON.stringify(roomData, null, 2));
-  }, [roomData]);
-
-  const setUserReadyMutation = useMutation(api.rooms.setUserReady);
-  const leaveRoomMutation = useMutation(api.rooms.leaveRoom);
-  const startSessionMutation = useMutation(api.rooms.startSession);
-
-  React.useEffect(() => {
+  useEffect(() => {
     const getUserId = async () => {
       const id = await AsyncStorage.getItem('userId');
       setCurrentUserId(id || '');
@@ -35,41 +23,40 @@ export default function RoomWaitingScreen() {
     getUserId();
   }, []);
 
-  // Auto-navigate when host starts the session
-  const [hasNavigated, setHasNavigated] = React.useState(false);
-  
-  React.useEffect(() => {
-    console.log('=== Navigation Check ===');
-    
-    // Only run if roomData is loaded
-    if (!roomData) {
-      console.log('No roomData yet, skipping navigation check');
-      return;
-    }
-    
-    // Don't navigate if we already did
-    if (hasNavigated) {
-      console.log('Already navigated, skipping');
-      return;
-    }
-    
-    console.log('Checking navigation conditions:');
-    console.log('  sessionStarted:', roomData.sessionStarted);
-    console.log('  currentScreen:', roomData.currentScreen);
-    console.log('  roomCode:', roomCode);
-    console.log('  roomId:', roomId);
-    
-    if (roomData.sessionStarted && roomData.currentScreen === 'preferences') {
-      console.log('🚀 CONDITIONS MET! NAVIGATING TO PREFERENCES!');
-      setHasNavigated(true); // Prevent multiple navigations
-      router.push({
-        pathname: '/preferences',
-        params: { roomCode, roomId, mode: 'group' }
-      });
-    } else {
-      console.log('❌ Conditions not met for navigation');
-    }
-  }, [roomData, hasNavigated]);
+  // Poll for room data
+  useEffect(() => {
+    if (!roomCode) return;
+
+    const fetchRoomData = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/rooms/${roomCode}`);
+        if (response.ok) {
+          const data = await response.json();
+          setRoomData(data);
+          
+          // Check if current user is the host (first member)
+          if (data.members && data.members.length > 0) {
+            setIsHost(data.members[0].userId === currentUserId);
+          }
+
+          // Auto-navigate when status changes to preferences
+          if (data.status === 'preferences' && !hasNavigated) {
+            setHasNavigated(true);
+            router.push({
+              pathname: '/preferences',
+              params: { roomCode, roomId: data.id, mode: 'group' }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching room data:', error);
+      }
+    };
+
+    fetchRoomData();
+    const interval = setInterval(fetchRoomData, 2000); // Poll every 2 seconds
+    return () => clearInterval(interval);
+  }, [roomCode, currentUserId, hasNavigated]);
 
   const handleShare = async () => {
     try {
@@ -97,51 +84,19 @@ export default function RoomWaitingScreen() {
   };
 
   const handleStart = async () => {
-    console.log('START clicked!');
-    console.log('roomId:', roomId);
-    console.log('roomData:', roomData);
-    
-    // Check if everyone is ready
-    const allReady = roomData?.members.every(m => m.isReady);
-    console.log('allReady:', allReady);
-    
-    if (!allReady) {
-      if (Platform.OS === 'web') {
-        alert('Wait for everyone to be ready!');
-      } else {
-        Alert.alert('Not Ready', 'Wait for everyone to be ready!');
-      }
+    if (!roomData || !roomId) {
+      Alert.alert('Error', 'Room data not loaded');
       return;
     }
 
-    if (!roomId) {
-      console.log('No roomId, returning');
-      return;
-    }
-
-    try {
-      console.log('Calling startSessionMutation...');
-      // Start the session - this will trigger navigation for ALL members
-      await startSessionMutation({
-        roomId: roomId as any,
-        screen: 'preferences',
-      });
-      console.log('Session started successfully!');
-      
-      // Navigate immediately for the host
-      console.log('Navigating host to preferences...');
-      router.push({
-        pathname: '/preferences',
-        params: { roomCode, roomId, mode: 'group' }
-      });
-    } catch (error: any) {
-      console.error('Start session error:', error);
-      alert('Error starting session: ' + error.message);
-    }
+    // Navigate to preferences screen
+    router.push({
+      pathname: '/preferences',
+      params: { roomCode, roomId, mode: 'group' }
+    });
   };
 
   const handleLeave = async () => {
-    // Use window.confirm for web, Alert.alert for native
     const confirmLeave = Platform.OS === 'web' 
       ? window.confirm('Are you sure you want to leave the room?')
       : await new Promise<boolean>((resolve) => {
@@ -156,21 +111,7 @@ export default function RoomWaitingScreen() {
         });
 
     if (!confirmLeave) return;
-
-    try {
-      // Only call leaveRoom if we have the required data
-      if (roomId && currentUserId) {
-        await leaveRoomMutation({
-          roomId: roomId as any,
-          userId: currentUserId as any,
-        });
-      }
-      router.back();
-    } catch (error: any) {
-      console.error('Leave room error:', error);
-      // Still navigate back even if there's an error
-      router.back();
-    }
+    router.back();
   };
 
   if (!roomData) {
@@ -181,9 +122,8 @@ export default function RoomWaitingScreen() {
     );
   }
 
-  const isHost = roomData.hostUserId === currentUserId;
-  const allReady = roomData.members.every(m => m.isReady);
-  const currentMember = roomData.members.find(m => m.userId === currentUserId);
+  const allMembersReady = roomData.members && roomData.members.length > 0;
+  const currentMember = roomData.members?.find((m: any) => m.userId === currentUserId);
 
   return (
     <View style={styles.container}>
