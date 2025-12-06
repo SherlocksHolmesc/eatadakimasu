@@ -1,290 +1,421 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Image,
   Dimensions,
-  Animated,
-  PanResponder,
+  Pressable,
+  Platform,
   Modal,
   ScrollView,
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+  interpolate,
+} from 'react-native-reanimated';
+import {
+  Gesture,
+  GestureDetector,
+} from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+import { X, Heart, Star, MapPin, Clock, ChevronLeft } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SWIPE_THRESHOLD = 120;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
 
-interface Restaurant {
+const COLORS = {
+  white: '#FFFFFF',
+  accent: '#ff2346',
+  lightGray: '#f5f5f5',
+  darkGray: '#333333',
+  green: '#00C853',
+};
+
+type Restaurant = {
   id: string;
   name: string;
-  cuisine: string;
-  rating: number;
-  price_range: string;
-  address: string;
   photo: string;
-  menu_photos: string[];
+  cuisine: string;
+  price_range: string;
+  rating: number;
+  address: string;
+  menu_photos?: string[];
+};
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+function getPriceSymbol(priceRange: string): string {
+  if (typeof priceRange === 'string') {
+    return priceRange;
+  }
+  const num = typeof priceRange === 'number' ? priceRange : parseInt(priceRange);
+  return '$'.repeat(Math.max(1, Math.min(4, num)));
 }
 
 export default function SwipeScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const { roomCode, mode, location, cuisines, minBudget, maxBudget } = params;
-
+  const params = useLocalSearchParams<{
+    roomCode?: string;
+    mode: string;
+    location: string;
+    cuisines: string;
+    minBudget: string;
+    maxBudget: string;
+  }>();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showMenu, setShowMenu] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
   const [userId] = useState(`user_${Math.random().toString(36).substr(2, 9)}`);
-  const [votedRestaurants, setVotedRestaurants] = useState<string[]>([]);
 
-  const position = useRef(new Animated.ValueXY()).current;
-  const rotate = position.x.interpolate({
-    inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2],
-    outputRange: ['-10deg', '0deg', '10deg'],
-    extrapolate: 'clamp',
-  });
-
-  const likeOpacity = position.x.interpolate({
-    inputRange: [0, SCREEN_WIDTH / 4],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const nopeOpacity = position.x.interpolate({
-    inputRange: [-SCREEN_WIDTH / 4, 0],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
 
   useEffect(() => {
-    fetchRestaurants();
+    loadRestaurants();
   }, []);
 
-  const fetchRestaurants = async () => {
+  const loadRestaurants = async () => {
     try {
-      const cuisineList = typeof cuisines === 'string' ? cuisines.split(',') : [cuisines];
+      const cuisineList = typeof params.cuisines === 'string' ? params.cuisines.split(',') : [params.cuisines];
       const response = await fetch(`${API_URL}/api/restaurants`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cuisines: cuisineList,
-          min_budget: parseInt(minBudget as string),
-          max_budget: parseInt(maxBudget as string),
-          location: location,
+          min_budget: parseInt(params.minBudget),
+          max_budget: parseInt(params.maxBudget),
+          location: params.location,
         }),
       });
 
       const data = await response.json();
       setRestaurants(data.restaurants || []);
     } catch (error) {
-      console.error('Fetch restaurants error:', error);
+      console.error('Error loading restaurants:', error);
       Alert.alert('Error', 'Failed to load restaurants');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const submitVote = async (restaurantId: string, vote: 'yes' | 'no') => {
+  const handleVote = async (vote: boolean) => {
+    if (currentIndex >= restaurants.length) return;
+
+    const restaurant = restaurants[currentIndex];
+
     try {
       await fetch(`${API_URL}/api/votes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          room_code: roomCode,
+          room_code: params.roomCode,
           user_id: userId,
-          restaurant_id: restaurantId,
-          vote: vote,
+          restaurant_id: restaurant.id,
+          vote: vote ? 'yes' : 'no',
         }),
       });
 
-      if (vote === 'yes') {
-        setVotedRestaurants([...votedRestaurants, restaurantId]);
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(
+          vote
+            ? Haptics.ImpactFeedbackStyle.Medium
+            : Haptics.ImpactFeedbackStyle.Light
+        );
+      }
+
+      if (currentIndex === restaurants.length - 1) {
+        router.push({
+          pathname: '/results',
+          params: {
+            roomCode: params.roomCode,
+            mode: params.mode,
+          },
+        });
+      } else {
+        setCurrentIndex((prev) => prev + 1);
+        translateX.value = 0;
+        translateY.value = 0;
       }
     } catch (error) {
-      console.error('Submit vote error:', error);
+      console.error('Error voting:', error);
     }
   };
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, gesture) => {
-        position.setValue({ x: gesture.dx, y: gesture.dy });
-      },
-      onPanResponderRelease: (_, gesture) => {
-        if (gesture.dx > SWIPE_THRESHOLD) {
-          // Swipe right - Like
-          forceSwipe('right');
-        } else if (gesture.dx < -SWIPE_THRESHOLD) {
-          // Swipe left - Nope
-          forceSwipe('left');
-        } else {
-          // Reset position
-          Animated.spring(position, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-            friction: 4,
-          }).start();
-        }
-      },
+  const handleSwipe = (direction: 'left' | 'right') => {
+    translateX.value = withTiming(
+      direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5,
+      { duration: 300 },
+      () => {
+        runOnJS(handleVote)(direction === 'right');
+      }
+    );
+  };
+
+  const panGesture = Gesture.Pan()
+    .onUpdate((event) => {
+      translateX.value = event.translationX;
+      translateY.value = event.translationY;
     })
-  ).current;
-
-  const forceSwipe = (direction: 'left' | 'right') => {
-    const x = direction === 'right' ? SCREEN_WIDTH + 100 : -SCREEN_WIDTH - 100;
-    Animated.timing(position, {
-      toValue: { x, y: 0 },
-      duration: 250,
-      useNativeDriver: false,
-    }).start(() => onSwipeComplete(direction));
-  };
-
-  const onSwipeComplete = (direction: 'left' | 'right') => {
-    const restaurant = restaurants[currentIndex];
-    if (restaurant) {
-      submitVote(restaurant.id, direction === 'right' ? 'yes' : 'no');
-    }
-
-    position.setValue({ x: 0, y: 0 });
-    setCurrentIndex(currentIndex + 1);
-  };
-
-  const handleLike = () => {
-    forceSwipe('right');
-  };
-
-  const handleNope = () => {
-    forceSwipe('left');
-  };
-
-  const viewResults = () => {
-    router.push({
-      pathname: '/results',
-      params: { roomCode, mode },
+    .onEnd(() => {
+      if (Math.abs(translateX.value) > SWIPE_THRESHOLD) {
+        const direction = translateX.value > 0 ? 'right' : 'left';
+        translateX.value = withTiming(
+          direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5,
+          { duration: 300 },
+          () => {
+            runOnJS(handleVote)(direction === 'right');
+          }
+        );
+      } else {
+        translateX.value = withSpring(0);
+        translateY.value = withSpring(0);
+      }
     });
-  };
 
-  if (isLoading) {
+  const cardStyle = useAnimatedStyle(() => {
+    const rotate = interpolate(
+      translateX.value,
+      [-SCREEN_WIDTH, 0, SCREEN_WIDTH],
+      [-20, 0, 20]
+    );
+
+    const opacity = interpolate(
+      Math.abs(translateX.value),
+      [0, SWIPE_THRESHOLD],
+      [1, 0.8]
+    );
+
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { rotate: `${rotate}deg` },
+      ],
+      opacity,
+    };
+  });
+
+  const likeOpacityStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateX.value,
+      [0, SWIPE_THRESHOLD],
+      [0, 1]
+    );
+    return { opacity };
+  });
+
+  const nopeOpacityStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      translateX.value,
+      [-SWIPE_THRESHOLD, 0],
+      [1, 0]
+    );
+    return { opacity };
+  });
+
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Finding restaurants...</Text>
+        <Text style={styles.loadingText}>Loading restaurants...</Text>
       </View>
     );
   }
 
-  if (currentIndex >= restaurants.length) {
+  if (restaurants.length === 0) {
     return (
-      <View style={styles.completedContainer}>
-        <Text style={styles.pacmanEmoji}>🔴</Text>
-        <Text style={styles.completedTitle}>All Done!</Text>
-        <Text style={styles.completedSubtitle}>
-          {mode === 'group' ? "Let's see what everyone agreed on!" : "Here are your picks!"}
-        </Text>
-        <TouchableOpacity style={styles.resultsButton} onPress={viewResults}>
-          <Text style={styles.resultsButtonText}>VIEW RESULTS</Text>
-        </TouchableOpacity>
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No restaurants found</Text>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </Pressable>
       </View>
     );
   }
 
   const currentRestaurant = restaurants[currentIndex];
 
+  if (!currentRestaurant) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerLogo}>Eatadakimasu</Text>
-        <View style={styles.placeholder} />
+        <Pressable onPress={() => router.back()}>
+          <ChevronLeft size={28} color={COLORS.darkGray} />
+        </Pressable>
+        {params.roomCode && (
+          <View style={styles.roomCodeContainer}>
+            <Text style={styles.roomCodeLabel}>Room</Text>
+            <Text style={styles.roomCode}>{params.roomCode}</Text>
+          </View>
+        )}
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressText}>
+            {currentIndex + 1}/{restaurants.length}
+          </Text>
+        </View>
       </View>
 
-      {/* Progress */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>
-          {currentIndex + 1} / {restaurants.length}
-        </Text>
+      <View style={styles.cardsContainer}>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.card, cardStyle]}>
+            <Pressable onPress={() => setShowModal(true)} style={styles.cardInner}>
+              <Image
+                source={{ uri: currentRestaurant.photo }}
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
+
+              <Animated.View style={[styles.likeStamp, likeOpacityStyle]}>
+                <Text style={styles.stampText}>LIKE</Text>
+              </Animated.View>
+
+              <Animated.View style={[styles.nopeStamp, nopeOpacityStyle]}>
+                <Text style={styles.stampText}>NOPE</Text>
+              </Animated.View>
+
+              <View style={styles.cardOverlay}>
+                <View style={styles.cardInfo}>
+                  <Text style={styles.restaurantName} numberOfLines={1}>
+                    {currentRestaurant.name}
+                  </Text>
+                  <View style={styles.infoRow}>
+                    <View style={styles.rating}>
+                      <Star size={16} color="#FFB800" fill="#FFB800" />
+                      <Text style={styles.ratingText}>
+                        {currentRestaurant.rating.toFixed(1)}
+                      </Text>
+                    </View>
+                    <Text style={styles.separator}>•</Text>
+                    <Text style={styles.price}>
+                      {getPriceSymbol(currentRestaurant.price_range)}
+                    </Text>
+                    <Text style={styles.separator}>•</Text>
+                    <Text style={styles.cuisine}>
+                      {currentRestaurant.cuisine}
+                    </Text>
+                  </View>
+                  <View style={styles.metaRow}>
+                    <View style={styles.metaItem}>
+                      <MapPin size={14} color={COLORS.white} />
+                      <Text style={styles.metaText}>
+                        {currentRestaurant.address.split(',')[0]}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+          </Animated.View>
+        </GestureDetector>
+
+        {currentIndex < restaurants.length - 1 && (
+          <View style={[styles.card, styles.nextCard]}>
+            <Image
+              source={{ uri: restaurants[currentIndex + 1].photo }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
+          </View>
+        )}
       </View>
 
-      {/* Card */}
-      <View style={styles.cardContainer}>
-        <Animated.View
-          style={[
-            styles.card,
-            {
-              transform: [
-                { translateX: position.x },
-                { translateY: position.y },
-                { rotate: rotate },
-              ],
-            },
-          ]}
-          {...panResponder.panHandlers}
+      <View style={styles.actions}>
+        <AnimatedPressable
+          style={styles.actionButton}
+          onPress={() => handleSwipe('left')}
         >
-          {/* Like/Nope Overlays */}
-          <Animated.View style={[styles.likeOverlay, { opacity: likeOpacity }]}>
-            <Text style={styles.likeText}>LIKE</Text>
-          </Animated.View>
-          <Animated.View style={[styles.nopeOverlay, { opacity: nopeOpacity }]}>
-            <Text style={styles.nopeText}>NOPE</Text>
-          </Animated.View>
+          <X size={32} color={COLORS.accent} strokeWidth={2.5} />
+        </AnimatedPressable>
 
-          {/* Restaurant Image */}
-          <TouchableOpacity
-            style={styles.imageContainer}
-            onPress={() => setShowMenu(true)}
-            activeOpacity={0.9}
-          >
-            <Image source={{ uri: currentRestaurant.photo }} style={styles.restaurantImage} />
-          </TouchableOpacity>
-
-          {/* Restaurant Info */}
-          <View style={styles.infoContainer}>
-            <Text style={styles.restaurantName}>{currentRestaurant.name}</Text>
-            <View style={styles.detailsRow}>
-              <Text style={styles.rating}>⭐ {currentRestaurant.rating}</Text>
-              <Text style={styles.price}>{currentRestaurant.price_range}</Text>
-              <Text style={styles.cuisine}>{currentRestaurant.cuisine}</Text>
-            </View>
-            <Text style={styles.address} numberOfLines={1}>
-              📍 {currentRestaurant.address}
-            </Text>
-            <Text style={styles.tapHint}>Tap image to view menu</Text>
-          </View>
-        </Animated.View>
+        <AnimatedPressable
+          style={[styles.actionButton, styles.likeButton]}
+          onPress={() => handleSwipe('right')}
+        >
+          <Heart size={32} color={COLORS.green} strokeWidth={2.5} />
+        </AnimatedPressable>
       </View>
 
-      {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.nopeButton} onPress={handleNope}>
-          <Text style={styles.actionIcon}>✕</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.likeButton} onPress={handleLike}>
-          <Text style={styles.actionIcon}>✓</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Menu Modal */}
-      <Modal visible={showMenu} animationType="slide" transparent={true}>
+      <Modal
+        visible={showModal}
+        animationType="slide"
+        onRequestClose={() => setShowModal(false)}
+      >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <ScrollView>
-              <Text style={styles.modalTitle}>Menu Photos</Text>
-              {currentRestaurant.menu_photos.map((photo, index) => (
-                <Image key={index} source={{ uri: photo }} style={styles.menuPhoto} />
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={styles.closeButton} onPress={() => setShowMenu(false)}>
-              <Text style={styles.closeButtonText}>CLOSE</Text>
-            </TouchableOpacity>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{currentRestaurant.name}</Text>
+            <Pressable onPress={() => setShowModal(false)}>
+              <X size={28} color={COLORS.darkGray} />
+            </Pressable>
           </View>
+
+          <ScrollView style={styles.modalContent}>
+            <Image
+              source={{ uri: currentRestaurant.photo }}
+              style={styles.modalImage}
+              resizeMode="cover"
+            />
+
+            <View style={styles.modalInfo}>
+              <View style={styles.modalRow}>
+                <Star size={20} color="#FFB800" fill="#FFB800" />
+                <Text style={styles.modalRating}>
+                  {currentRestaurant.rating.toFixed(1)}
+                </Text>
+                <Text style={styles.modalSeparator}>•</Text>
+                <Text style={styles.modalPrice}>
+                  {getPriceSymbol(currentRestaurant.price_range)}
+                </Text>
+                <Text style={styles.modalSeparator}>•</Text>
+                <Text style={styles.modalCuisine}>
+                  {currentRestaurant.cuisine}
+                </Text>
+              </View>
+
+              <View style={styles.modalMeta}>
+                <View style={styles.modalMetaItem}>
+                  <MapPin size={18} color={COLORS.darkGray} />
+                  <Text style={styles.modalMetaText}>
+                    {currentRestaurant.address}
+                  </Text>
+                </View>
+              </View>
+
+              {currentRestaurant.menu_photos && currentRestaurant.menu_photos.length > 0 && (
+                <>
+                  <Text style={styles.menuPhotosLabel}>Menu Photos</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.menuPhotosScroll}
+                  >
+                    {currentRestaurant.menu_photos.map((photo, index) => (
+                      <Image
+                        key={index}
+                        source={{ uri: photo }}
+                        style={styles.menuPhoto}
+                        resizeMode="cover"
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+            </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -294,249 +425,318 @@ export default function SwipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 18,
-    color: '#666',
-  },
-  completedContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  pacmanEmoji: {
-    fontSize: 80,
-    marginBottom: 24,
-  },
-  completedTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  completedSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
-  resultsButton: {
-    backgroundColor: '#ff2346',
-    paddingHorizontal: 40,
-    paddingVertical: 16,
-    borderRadius: 28,
-  },
-  resultsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    backgroundColor: COLORS.white,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 16,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
   },
-  backButton: {
-    fontSize: 28,
-    color: '#ff2346',
+  roomCodeContainer: {
+    backgroundColor: COLORS.lightGray,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  headerLogo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ff2346',
+  roomCodeLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    textAlign: 'center',
   },
-  placeholder: {
-    width: 28,
+  roomCode: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.darkGray,
+    letterSpacing: 2,
+    textAlign: 'center',
   },
   progressContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: COLORS.lightGray,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   progressText: {
     fontSize: 14,
-    color: '#666',
+    fontWeight: '700',
+    color: COLORS.darkGray,
   },
-  cardContainer: {
+  cardsContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
-    width: SCREEN_WIDTH - 40,
-    height: SCREEN_HEIGHT * 0.65,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    width: SCREEN_WIDTH - 48,
+    height: SCREEN_HEIGHT * 0.6,
+    borderRadius: 24,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  likeOverlay: {
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
     position: 'absolute',
-    top: 40,
-    right: 40,
-    zIndex: 10,
-    backgroundColor: 'rgba(0, 255, 0, 0.3)',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 4,
-    borderColor: '#00ff00',
   },
-  likeText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#00ff00',
+  nextCard: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.5,
   },
-  nopeOverlay: {
-    position: 'absolute',
-    top: 40,
-    left: 40,
-    zIndex: 10,
-    backgroundColor: 'rgba(255, 0, 0, 0.3)',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 4,
-    borderColor: '#ff0000',
-  },
-  nopeText: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ff0000',
-  },
-  imageContainer: {
+  cardInner: {
     flex: 1,
   },
-  restaurantImage: {
+  cardImage: {
     width: '100%',
     height: '100%',
   },
-  infoContainer: {
-    padding: 20,
-    backgroundColor: '#FFFFFF',
+  likeStamp: {
+    position: 'absolute',
+    top: 40,
+    right: 40,
+    backgroundColor: COLORS.green,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    transform: [{ rotate: '20deg' }],
+    borderWidth: 4,
+    borderColor: COLORS.white,
+  },
+  nopeStamp: {
+    position: 'absolute',
+    top: 40,
+    left: 40,
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    transform: [{ rotate: '-20deg' }],
+    borderWidth: 4,
+    borderColor: COLORS.white,
+  },
+  stampText: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.white,
+    letterSpacing: 2,
+  },
+  cardOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 24,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  cardInfo: {
+    gap: 8,
   },
   restaurantName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.white,
+    marginBottom: 4,
   },
-  detailsRow: {
+  infoRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
+    alignItems: 'center',
+    gap: 8,
   },
   rating: {
-    fontSize: 14,
-    color: '#666',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  separator: {
+    fontSize: 16,
+    color: COLORS.white,
+    opacity: 0.5,
   },
   price: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
   },
   cuisine: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaText: {
     fontSize: 14,
-    color: '#666',
-    textTransform: 'capitalize',
+    fontWeight: '600',
+    color: COLORS.white,
+    opacity: 0.9,
   },
-  address: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
-  },
-  tapHint: {
-    fontSize: 11,
-    color: '#ff2346',
-    fontStyle: 'italic',
-  },
-  actionsContainer: {
+  actions: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 60,
-    paddingVertical: 30,
+    alignItems: 'center',
+    gap: 40,
+    paddingBottom: 60,
   },
-  nopeButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#FFFFFF',
+  actionButton: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#ff0000',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
     elevation: 5,
-    borderWidth: 3,
-    borderColor: '#ff0000',
+    borderWidth: 2,
+    borderColor: COLORS.accent,
   },
   likeButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#FFFFFF',
+    borderColor: COLORS.green,
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#00ff00',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 5,
-    borderWidth: 3,
-    borderColor: '#00ff00',
+    backgroundColor: COLORS.white,
   },
-  actionIcon: {
-    fontSize: 36,
-    fontWeight: 'bold',
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 24,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    marginBottom: 20,
+  },
+  backButton: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: COLORS.white,
   },
-  modalContent: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightGray,
   },
   modalTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 20,
-    textAlign: 'center',
+    fontWeight: '800',
+    color: COLORS.darkGray,
+    flex: 1,
   },
-  menuPhoto: {
+  modalContent: {
+    flex: 1,
+  },
+  modalImage: {
     width: '100%',
-    height: 250,
-    borderRadius: 12,
+    height: 300,
+  },
+  modalInfo: {
+    padding: 24,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  modalRating: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  modalSeparator: {
+    fontSize: 18,
+    color: COLORS.darkGray,
+    opacity: 0.3,
+  },
+  modalPrice: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  modalCuisine: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+  },
+  modalMeta: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  modalMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalMetaText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    opacity: 0.7,
+  },
+  menuPhotosLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.darkGray,
     marginBottom: 12,
   },
-  closeButton: {
-    backgroundColor: '#ff2346',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 16,
+  menuPhotosScroll: {
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
   },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+  menuPhoto: {
+    width: 200,
+    height: 150,
+    borderRadius: 12,
+    marginRight: 12,
   },
 });
