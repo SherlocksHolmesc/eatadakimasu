@@ -154,7 +154,7 @@ export default function RoomWaitingScreen() {
         response = await fetch(apiUrl);
       }
 
-      const data = await response.json() as { predictions?: PlacePrediction[] };
+      const data = await response.json() as { predictions?: any[] };
       
       if (data.predictions) {
         setPredictions(data.predictions);
@@ -218,7 +218,7 @@ export default function RoomWaitingScreen() {
         response = await fetch(geocodeUrl);
       }
       
-      const data = await response.json() as { results?: { formatted_address: string }[] };
+      const data = await response.json() as { results?: Array<{ formatted_address: string }> };
 
       if (data.results && data.results.length > 0) {
         const formattedAddress = data.results[0].formatted_address;

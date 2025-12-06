@@ -28,7 +28,20 @@ import * as Haptics from 'expo-haptics';
 import { X, Heart, Star, MapPin, Clock, ChevronLeft } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
+                process.env.EXPO_PUBLIC_BACKEND_URL || 
+                'http://localhost:8001';
+
+// Debug: Log API URL on load
+if (__DEV__) {
+  console.log('🔗 Backend API URL:', API_URL);
+  console.log('📋 Config check:', {
+    fromConfig: Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL,
+    fromEnv: process.env.EXPO_PUBLIC_BACKEND_URL,
+    final: API_URL
+  });
+}
+
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
 
@@ -94,6 +107,11 @@ export default function SwipeScreen() {
   const loadRestaurants = async () => {
     try {
       const cuisineList = typeof params.cuisines === 'string' ? params.cuisines.split(',') : [params.cuisines];
+      
+      // Debug: Log the URL being called
+      if (__DEV__) {
+        console.log('🌐 Calling backend:', `${API_URL}/api/restaurants/group-recommend`);
+      }
       
       // If in group mode, use AI-powered group recommendations
       if (params.mode === 'group' && params.roomCode) {
