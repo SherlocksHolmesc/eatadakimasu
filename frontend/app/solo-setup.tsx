@@ -18,7 +18,7 @@ export default function SoloSetupScreen() {
         body: JSON.stringify({ mode: 'solo' }),
       });
       
-      const data = await response.json();
+      const data = await response.json() as { room_code?: string };
       
       if (data.room_code) {
         router.push({

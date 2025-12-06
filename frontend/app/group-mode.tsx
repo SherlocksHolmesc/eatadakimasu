@@ -1,35 +1,54 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function GroupModeScreen() {
   const router = useRouter();
   const [roomCode, setRoomCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const createRoomMutation = useMutation(api.rooms.createRoom);
+  const joinRoomMutation = useMutation(api.rooms.joinRoom);
+
+  useEffect(() => {
+    // Get logged-in user ID
+    const getUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setUserId(id);
+    };
+    getUserId();
+  }, []);
 
   const createRoom = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'Please log in first');
+      router.push('/auth/login');
+      return;
+    }
+
     setIsCreating(true);
     try {
-      const response = await fetch(`${API_URL}/api/rooms/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'group' }),
+      const result = await createRoomMutation({
+        userId: userId as any,
+        mode: 'group',
       });
-      
-      const data = await response.json();
-      
-      if (data.room_code) {
-        router.push({
-          pathname: '/preferences',
-          params: { roomCode: data.room_code, mode: 'group' }
-        });
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create room. Please try again.');
+
+      // Navigate to a waiting room screen with the room code
+      router.push({
+        pathname: '/room-waiting',
+        params: { 
+          roomCode: result.roomCode,
+          roomId: result.roomId,
+          mode: 'group' 
+        }
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create room. Please try again.');
       console.error('Create room error:', error);
     } finally {
       setIsCreating(false);
@@ -42,25 +61,30 @@ export default function GroupModeScreen() {
       return;
     }
 
+    if (!userId) {
+      Alert.alert('Error', 'Please log in first');
+      router.push('/auth/login');
+      return;
+    }
+
     setIsJoining(true);
     try {
-      const response = await fetch(`${API_URL}/api/rooms/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_code: roomCode.toUpperCase() }),
+      const result = await joinRoomMutation({
+        userId: userId as any,
+        roomCode: roomCode.toUpperCase(),
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        router.push({
-          pathname: '/preferences',
-          params: { roomCode: data.room_code, mode: 'group' }
-        });
-      } else {
-        Alert.alert('Error', 'Room not found. Please check the code.');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to join room. Please try again.');
+
+      // Navigate to waiting room
+      router.push({
+        pathname: '/room-waiting',
+        params: { 
+          roomCode: result.roomCode,
+          roomId: result.roomId,
+          mode: 'group' 
+        }
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Room not found. Please check the code.');
       console.error('Join room error:', error);
     } finally {
       setIsJoining(false);

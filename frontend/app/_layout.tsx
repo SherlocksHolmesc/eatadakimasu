@@ -1,36 +1,32 @@
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { StyleSheet } from 'react-native';
+import { ConvexProvider, ConvexReactClient } from 'convex/react';
+import Constants from 'expo-constants';
+
+// Get Convex URL from environment
+const convexUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_CONVEX_URL || 
+                  process.env.EXPO_PUBLIC_CONVEX_URL || 
+                  'https://famous-shepherd-2.convex.cloud';
+
+// Initialize Convex client
+const convex = new ConvexReactClient(convexUrl);
 
 export default function RootLayout() {
-  useFrameworkReady();
-
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+    <ConvexProvider client={convex}>
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="auth/login" />
+        <Stack.Screen name="auth/register" />
         <Stack.Screen name="landing" />
-        <Stack.Screen name="group-mode" />
         <Stack.Screen name="solo-setup" />
-        <Stack.Screen name="group/room" />
-        <Stack.Screen name="group/location" />
-        <Stack.Screen name="group/preferences" />
-        <Stack.Screen name="group/budget" />
+        <Stack.Screen name="group-mode" />
+        <Stack.Screen name="room-waiting" />
         <Stack.Screen name="preferences" />
+        <Stack.Screen name="preferences-waiting" />
         <Stack.Screen name="swipe" />
         <Stack.Screen name="results" />
       </Stack>
-      <StatusBar style="dark" />
-    </GestureHandlerRootView>
+    </ConvexProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
 

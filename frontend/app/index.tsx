@@ -12,9 +12,26 @@ export default function PreloaderScreen() {
   const router = useRouter();
 
   useEffect(() => {
+    // Animate progress bar
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 3000,
+      easing: Easing.ease,
+      useNativeDriver: false,
+    }).start();
+
+    // Animate Pacman eating
+    Animated.timing(pacmanPosition, {
+      toValue: 1,
+      duration: 3000,
+      easing: Easing.ease,
+      useNativeDriver: true,
+    }).start();
+
+    // Navigate to login/register after 3 seconds
     const timer = setTimeout(() => {
-      router.replace('/landing');
-    }, 2500);
+      router.replace('/auth/login');
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);

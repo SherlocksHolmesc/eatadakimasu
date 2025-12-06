@@ -7,12 +7,13 @@ import {
   TextInput,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Constants from 'expo-constants';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 const CUISINES = [
   { id: 'japanese', label: 'Japanese', icon: '🍣' },
@@ -26,15 +27,40 @@ const CUISINES = [
 export default function PreferencesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { roomCode, mode } = params;
+  const { roomCode, roomId, mode } = params;
 
+  // Debug: Log if component re-mounts
+  React.useEffect(() => {
+    console.log('✅ Preferences screen mounted');
+    return () => {
+      console.log('❌ Preferences screen unmounted');
+    };
+  }, []);
+
+  const [currentUserId, setCurrentUserId] = useState<string>('');
   const [location, setLocation] = useState('');
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [minBudget, setMinBudget] = useState(10);
   const [maxBudget, setMaxBudget] = useState(50);
   const [isSaving, setIsSaving] = useState(false);
+  const [savedSuccessfully, setSavedSuccessfully] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  const updateMemberPreferencesMutation = useMutation(api.rooms.updateMemberPreferences);
+  
+  // Don't query room data during selection to avoid re-renders
+  // We'll show member progress only in the waiting screen
+
+  React.useEffect(() => {
+    const getUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setCurrentUserId(id || '');
+    };
+    getUserId();
+  }, []);
 
   const toggleCuisine = (cuisineId: string) => {
+    setHasUserInteracted(true); // Mark that user has started selecting
     if (selectedCuisines.includes(cuisineId)) {
       setSelectedCuisines(selectedCuisines.filter(c => c !== cuisineId));
     } else {
@@ -43,48 +69,75 @@ export default function PreferencesScreen() {
   };
 
   const handleNext = async () => {
-    if (!location.trim()) {
-      Alert.alert('Error', 'Please enter a location');
+    if (selectedCuisines.length === 0) {
+      const message = 'Please select at least one cuisine';
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
       return;
     }
 
-    if (selectedCuisines.length === 0) {
-      Alert.alert('Error', 'Please select at least one cuisine');
+    if (!roomId || !currentUserId) {
+      console.error('Missing roomId or userId');
       return;
     }
 
     setIsSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/preferences`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          room_code: roomCode,
-          location: location,
+      console.log('Saving preferences to Convex...');
+      await updateMemberPreferencesMutation({
+        roomId: roomId as any,
+        userId: currentUserId as any,
+        preferences: {
           cuisines: selectedCuisines,
-          min_budget: minBudget,
-          max_budget: maxBudget,
-        }),
+          distance: maxBudget, // Using as distance for now
+          priceRange: `${minBudget}-${maxBudget}`,
+        },
       });
 
-      if (response.ok) {
-        router.push({
-          pathname: '/swipe',
-          params: {
-            roomCode,
-            mode,
-            location,
-            cuisines: selectedCuisines.join(','),
-            minBudget,
-            maxBudget,
-          },
-        });
+      console.log('Preferences saved successfully!');
+      setSavedSuccessfully(true);
+      
+      // For group mode, go to waiting screen
+      // For solo mode, go directly to swipe
+      if (mode === 'group') {
+        // Show success message briefly before going to waiting screen
+        setTimeout(() => {
+          router.push({
+            pathname: '/preferences-waiting',
+            params: {
+              roomCode,
+              roomId,
+              mode,
+            },
+          });
+        }, 1500);
       } else {
-        Alert.alert('Error', 'Failed to save preferences');
+        // Solo mode - go directly to swipe
+        setTimeout(() => {
+          router.push({
+            pathname: '/swipe',
+            params: {
+              roomCode,
+              roomId,
+              mode,
+              cuisines: selectedCuisines.join(','),
+              minBudget,
+              maxBudget,
+            },
+          });
+        }, 1500);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save preferences');
+    } catch (error: any) {
       console.error('Save preferences error:', error);
+      const message = 'Failed to save preferences. Please try again.';
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -193,14 +246,23 @@ export default function PreferencesScreen() {
 
       {/* Next Button */}
       <TouchableOpacity
-        style={styles.nextButton}
+        style={[
+          styles.nextButton,
+          savedSuccessfully && styles.nextButtonSuccess
+        ]}
         onPress={handleNext}
-        disabled={isSaving}
+        disabled={isSaving || savedSuccessfully}
       >
         <Text style={styles.nextButtonText}>
-          {isSaving ? 'LOADING...' : 'NEXT'}
+          {savedSuccessfully ? '✓ ALL DONE!' : (isSaving ? 'SAVING...' : 'SAVE & CONTINUE')}
         </Text>
       </TouchableOpacity>
+      
+      {savedSuccessfully && (
+        <Text style={styles.successMessage}>
+          Your preferences have been saved! 🎉
+        </Text>
+      )}
     </ScrollView>
   );
 }
@@ -344,6 +406,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
     marginBottom: 40,
+  },
+  nextButtonSuccess: {
+    backgroundColor: '#4CAF50',
+  },
+  successMessage: {
+    textAlign: 'center',
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: -20,
+    marginBottom: 20,
+  },
+  memberProgress: {
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  memberProgressTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  memberItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  memberName: {
+    fontSize: 14,
+    color: '#333',
+  },
+  memberStatus: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
   },
   nextButtonText: {
     color: '#FFFFFF',
