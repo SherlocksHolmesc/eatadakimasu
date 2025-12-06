@@ -79,7 +79,6 @@ frontend/.metro-cache/
 
 # Convex
 .env.local
-convex/_generated/
 
 # Mobile development
 android-sdk/ -e 

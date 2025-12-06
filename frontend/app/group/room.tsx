@@ -49,7 +49,7 @@ export default function RoomScreen() {
         body: JSON.stringify({ mode: 'group' }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { room_code?: string };
 
       if (data.room_code) {
         if (Platform.OS !== 'web') {
@@ -85,7 +85,7 @@ export default function RoomScreen() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as { room_code?: string };
         
         if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -93,7 +93,7 @@ export default function RoomScreen() {
 
         router.push({
           pathname: '/group/location',
-          params: { roomCode: data.room_code, mode: 'group' },
+          params: { roomCode: data.room_code || '', mode: 'group' },
         });
       } else {
         Alert.alert('Room Not Found', 'No active room found with this code.');

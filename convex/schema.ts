@@ -6,11 +6,13 @@ export default defineSchema({
   users: defineTable({
     username: v.string(),
     email: v.string(),
-    passwordHash: v.string(),
+    passwordHash: v.optional(v.string()), // Optional for OAuth users
+    googleId: v.optional(v.string()), // Google OAuth ID
     createdAt: v.number(),
   })
     .index("by_email", ["email"])
-    .index("by_username", ["username"]),
+    .index("by_username", ["username"])
+    .index("by_googleId", ["googleId"]),
 
   // Rooms table for group sessions
   rooms: defineTable({

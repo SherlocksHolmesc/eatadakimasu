@@ -200,7 +200,7 @@ export default function SwipeScreen() {
         { translateX: translateX.value },
         { translateY: translateY.value },
         { rotate: `${rotate}deg` },
-      ],
+      ] as any,
       opacity,
     };
   });

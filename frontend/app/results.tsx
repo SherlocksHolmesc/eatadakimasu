@@ -36,6 +36,7 @@ type RestaurantWithVotes = {
   rating: number;
   address: string;
   vote_count?: number;
+  votes?: number;
   totalVotes?: number;
 };
 
@@ -65,14 +66,14 @@ export default function ResultsScreen() {
   const loadResults = async () => {
     try {
       const response = await fetch(`${API_URL}/api/results/${params.roomCode}?mode=${params.mode}`);
-      const data = await response.json();
+      const data = await response.json() as { results?: any[] };
       
       const results = (data.results || []).map((restaurant: any) => ({
         ...restaurant,
         votes: restaurant.vote_count || 0,
         totalVotes: restaurant.totalVotes || 0,
       }))
-      .filter((r: RestaurantWithVotes) => r.votes > 0)
+      .filter((r: RestaurantWithVotes) => (r.votes || 0) > 0)
       .sort((a: RestaurantWithVotes, b: RestaurantWithVotes) => (b.votes || 0) - (a.votes || 0));
 
       setRestaurants(results);
