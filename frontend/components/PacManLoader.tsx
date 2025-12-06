@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -10,50 +10,94 @@ import Animated, {
 } from 'react-native-reanimated';
 
 const COLORS = {
-  accent: '#ff2346',
+  accent: '#dc2626', // red-600
   white: '#FFFFFF',
+  stone50: '#fafaf9',
 };
+
+const FOOD_EMOJIS = ['🍔', '🍕', '🍣', '🍩', '🦐'];
 
 export function PacManLoader() {
   const mouthRotation = useSharedValue(0);
-  const dot1Opacity = useSharedValue(1);
-  const dot2Opacity = useSharedValue(1);
-  const dot3Opacity = useSharedValue(1);
+  const pacmanPosition = useSharedValue(0);
+  const foodOpacity1 = useSharedValue(1);
+  const foodOpacity2 = useSharedValue(1);
+  const foodOpacity3 = useSharedValue(1);
+  const foodOpacity4 = useSharedValue(1);
+  const foodOpacity5 = useSharedValue(1);
 
   useEffect(() => {
+    // Pac-Man mouth animation
     mouthRotation.value = withRepeat(
       withSequence(
-        withTiming(25, { duration: 200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(30, { duration: 200, easing: Easing.inOut(Easing.ease) }),
         withTiming(0, { duration: 200, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       false
     );
 
-    dot1Opacity.value = withRepeat(
+    // Pac-Man moving across
+    pacmanPosition.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 100 }),
-        withTiming(0.3, { duration: 300 })
+        withTiming(200, { duration: 2500, easing: Easing.linear }),
+        withTiming(0, { duration: 0 })
       ),
       -1,
       false
     );
 
-    dot2Opacity.value = withRepeat(
+    // Food items disappearing as Pac-Man passes
+    foodOpacity1.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 300 }),
-        withTiming(1, { duration: 100 }),
-        withTiming(0.3, { duration: 300 })
+        withTiming(1, { duration: 0 }),
+        withTiming(1, { duration: 400 }),
+        withTiming(0, { duration: 100 }),
+        withTiming(0, { duration: 2000 })
       ),
       -1,
       false
     );
 
-    dot3Opacity.value = withRepeat(
+    foodOpacity2.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 600 }),
-        withTiming(1, { duration: 100 }),
-        withTiming(0.3, { duration: 300 })
+        withTiming(1, { duration: 0 }),
+        withTiming(1, { duration: 800 }),
+        withTiming(0, { duration: 100 }),
+        withTiming(0, { duration: 1600 })
+      ),
+      -1,
+      false
+    );
+
+    foodOpacity3.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 0 }),
+        withTiming(1, { duration: 1200 }),
+        withTiming(0, { duration: 100 }),
+        withTiming(0, { duration: 1200 })
+      ),
+      -1,
+      false
+    );
+
+    foodOpacity4.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 0 }),
+        withTiming(1, { duration: 1600 }),
+        withTiming(0, { duration: 100 }),
+        withTiming(0, { duration: 800 })
+      ),
+      -1,
+      false
+    );
+
+    foodOpacity5.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 0 }),
+        withTiming(1, { duration: 2000 }),
+        withTiming(0, { duration: 100 }),
+        withTiming(0, { duration: 400 })
       ),
       -1,
       false
@@ -68,28 +112,39 @@ export function PacManLoader() {
     transform: [{ rotate: `${mouthRotation.value}deg` }],
   }));
 
-  const dot1Style = useAnimatedStyle(() => ({
-    opacity: dot1Opacity.value,
+  const pacmanContainerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pacmanPosition.value }],
   }));
 
-  const dot2Style = useAnimatedStyle(() => ({
-    opacity: dot2Opacity.value,
-  }));
+  const food1Style = useAnimatedStyle(() => ({ opacity: foodOpacity1.value }));
+  const food2Style = useAnimatedStyle(() => ({ opacity: foodOpacity2.value }));
+  const food3Style = useAnimatedStyle(() => ({ opacity: foodOpacity3.value }));
+  const food4Style = useAnimatedStyle(() => ({ opacity: foodOpacity4.value }));
+  const food5Style = useAnimatedStyle(() => ({ opacity: foodOpacity5.value }));
 
-  const dot3Style = useAnimatedStyle(() => ({
-    opacity: dot3Opacity.value,
-  }));
+  const foodStyles = [food1Style, food2Style, food3Style, food4Style, food5Style];
 
   return (
     <View style={styles.container}>
-      <View style={styles.pacmanContainer}>
-        <Animated.View style={[styles.pacmanTop, pacmanTopStyle]} />
-        <Animated.View style={[styles.pacmanBottom, pacmanBottomStyle]} />
-      </View>
-      <View style={styles.dotsContainer}>
-        <Animated.View style={[styles.dot, dot1Style]} />
-        <Animated.View style={[styles.dot, dot2Style]} />
-        <Animated.View style={[styles.dot, dot3Style]} />
+      <Text style={styles.loadingText}>LOADING...</Text>
+      <View style={styles.loaderContainer}>
+        {/* Food items */}
+        <View style={styles.foodRow}>
+          {FOOD_EMOJIS.map((emoji, index) => (
+            <Animated.Text key={index} style={[styles.foodEmoji, foodStyles[index]]}>
+              {emoji}
+            </Animated.Text>
+          ))}
+        </View>
+        
+        {/* Pac-Man */}
+        <Animated.View style={[styles.pacmanWrapper, pacmanContainerStyle]}>
+          <View style={styles.pacmanContainer}>
+            <Animated.View style={[styles.pacmanTop, pacmanTopStyle]} />
+            <Animated.View style={[styles.pacmanBottom, pacmanBottomStyle]} />
+            <View style={styles.pacmanEye} />
+          </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -97,45 +152,73 @@ export function PacManLoader() {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pacmanContainer: {
-    width: 60,
+  loadingText: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: COLORS.accent,
+    letterSpacing: 4,
+    marginBottom: 40,
+  },
+  loaderContainer: {
+    width: 260,
     height: 60,
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  foodRow: {
+    position: 'absolute',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 8,
+  },
+  foodEmoji: {
+    fontSize: 20,
+  },
+  pacmanWrapper: {
+    position: 'absolute',
+    left: 0,
+    zIndex: 10,
+  },
+  pacmanContainer: {
+    width: 48,
+    height: 48,
     position: 'relative',
   },
   pacmanTop: {
     position: 'absolute',
-    width: 60,
-    height: 30,
+    width: 48,
+    height: 24,
     backgroundColor: COLORS.accent,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     top: 0,
     left: 0,
+    transformOrigin: 'bottom center',
   },
   pacmanBottom: {
     position: 'absolute',
-    width: 60,
-    height: 30,
+    width: 48,
+    height: 24,
     backgroundColor: COLORS.accent,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     bottom: 0,
     left: 0,
+    transformOrigin: 'top center',
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    marginLeft: 20,
-    gap: 12,
-  },
-  dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.accent,
+  pacmanEye: {
+    position: 'absolute',
+    width: 6,
+    height: 6,
+    backgroundColor: COLORS.white,
+    borderRadius: 3,
+    top: 8,
+    right: 16,
+    zIndex: 20,
   },
 });
 

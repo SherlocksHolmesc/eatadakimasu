@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -7,6 +7,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Mail, Lock } from 'lucide-react-native';
+
+const COLORS = {
+  white: '#FFFFFF',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone400: '#a8a29e',
+  stone500: '#78716c',
+  stone600: '#57534e',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  red700: '#b91c1c',
+  rose50: '#fff1f2',
+};
 
 // Complete OAuth session for better UX
 WebBrowser.maybeCompleteAuthSession();
@@ -172,53 +190,82 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Back button */}
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      {/* Background */}
+      <View style={styles.bgGradient} />
+      
+      {/* Logo - PNG Ramen Bowl */}
+      <Animated.View 
+        style={styles.logoContainer}
+        entering={FadeInDown.delay(200).springify()}
       >
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
+        <Image
+          source={require('../../assets/images/42aaecb8daf9fe805d264506738108e934067bf1e19a2bce4515936448bb6077.png')}
+          style={{ width: 100, height: 100 }}
+          resizeMode="contain"
+        />
+      </Animated.View>
 
-      {/* Logo */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.pacmanEmoji}>🔴</Text>
-        <Text style={styles.logo}>Eatadakimasu</Text>
+      {/* Title */}
+      <Animated.View 
+        style={styles.titleContainer}
+        entering={FadeInDown.delay(300).springify()}
+      >
+        <Text style={styles.title}>EATADAKIMASU</Text>
         <Text style={styles.subtitle}>Welcome back!</Text>
-      </View>
+      </Animated.View>
 
-      {/* Login Form */}
-      <View style={styles.formContainer}>
+      {/* Form */}
+      <Animated.View 
+        style={styles.formContainer}
+        entering={FadeInDown.delay(400).springify()}
+      >
+        {/* Email field */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="your@email.com"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            editable={!isLoading}
-          />
+          <View style={styles.inputWrapper}>
+            <Mail size={20} color={COLORS.stone400} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="your@email.com"
+              placeholderTextColor={COLORS.stone400}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              editable={!isLoading}
+            />
+          </View>
         </View>
 
+        {/* Password field */}
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="••••••••"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            editable={!isLoading}
-          />
+          <View style={styles.inputWrapper}>
+            <Lock size={20} color={COLORS.stone400} style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={COLORS.stone400}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              editable={!isLoading}
+            />
+          </View>
         </View>
 
+        {/* Login button */}
         <TouchableOpacity 
           style={[styles.loginButton, isLoading && styles.buttonDisabled]}
           onPress={handleLogin}
           disabled={isLoading || isGoogleLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -239,103 +286,182 @@ export default function LoginScreen() {
           style={[styles.googleButton, (isLoading || isGoogleLoading) && styles.buttonDisabled]}
           onPress={handleGoogleSignIn}
           disabled={isLoading || isGoogleLoading}
+          activeOpacity={0.8}
         >
           {isGoogleLoading ? (
             <ActivityIndicator color="#4285F4" />
           ) : (
             <>
-              <Text style={styles.googleIcon}>G</Text>
+              <View style={styles.googleIconContainer}>
+                <Text style={styles.googleG}>G</Text>
+              </View>
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </>
           )}
         </TouchableOpacity>
 
+        {/* Register link */}
         <View style={styles.registerContainer}>
           <Text style={styles.registerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/auth/register')}>
             <Text style={styles.registerLink}>Register</Text>
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* Decoration */}
-      <View style={styles.decorationContainer}>
-        <Text style={styles.decorationText}>• • •</Text>
-      </View>
-    </View>
+      </Animated.View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.white,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     padding: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    marginTop: 40,
-    marginBottom: 20,
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: '#ff2346',
+  bgGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    backgroundColor: COLORS.rose50,
+    opacity: 0.5,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
   },
-  pacmanEmoji: {
-    fontSize: 60,
-    marginBottom: 12,
+  titleContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
   },
-  logo: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ff2346',
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.red600,
+    letterSpacing: 4,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.stone500,
   },
   formContainer: {
-    flex: 1,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
     fontWeight: '500',
+    color: COLORS.stone700,
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.stone200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginLeft: 16,
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    flex: 1,
+    height: 52,
+    paddingHorizontal: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
+    color: COLORS.stone700,
   },
   loginButton: {
-    backgroundColor: '#ff2346',
-    height: 56,
-    borderRadius: 28,
+    backgroundColor: COLORS.red600,
+    height: 52,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 16,
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   loginButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   buttonDisabled: {
     opacity: 0.6,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.stone200,
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: COLORS.stone400,
+  },
+  googleButton: {
+    backgroundColor: COLORS.white,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: COLORS.stone200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  googleIcon: {
+    marginRight: 12,
+  },
+  googleIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  googleG: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4285F4',
+  },
+  googleButtonText: {
+    color: COLORS.stone600,
+    fontSize: 16,
+    fontWeight: '500',
   },
   registerContainer: {
     flexDirection: 'row',
@@ -344,56 +470,11 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.stone500,
   },
   registerLink: {
     fontSize: 14,
-    color: '#ff2346',
-    fontWeight: 'bold',
-  },
-  decorationContainer: {
-    alignItems: 'center',
-    paddingBottom: 20,
-  },
-  decorationText: {
-    fontSize: 24,
-    color: '#ff2346',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#666',
-  },
-  googleButton: {
-    backgroundColor: '#FFFFFF',
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginTop: 10,
-  },
-  googleIcon: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4285F4',
-    marginRight: 12,
-  },
-  googleButtonText: {
-    color: '#333',
-    fontSize: 16,
+    color: COLORS.red600,
     fontWeight: '600',
   },
 });

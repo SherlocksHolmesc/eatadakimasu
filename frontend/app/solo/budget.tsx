@@ -19,9 +19,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red500: '#ef4444',
+  red600: '#dc2626',
+  green500: '#22c55e',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -154,14 +161,14 @@ export default function SoloBudgetScreen() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
         style={styles.content}
         entering={FadeInDown.delay(100).springify()}
       >
-        <Text style={styles.title}>Budget</Text>
+        <Text style={styles.title}>BUDGET</Text>
         <Text style={styles.description}>
           Set your budget range in MYR
         </Text>
@@ -200,9 +207,9 @@ export default function SoloBudgetScreen() {
                   const newMin = value >= maxBudget ? maxBudget - 5 : value;
                   setMinBudget(Math.max(5, newMin));
                 }}
-                minimumTrackTintColor={COLORS.accent}
-                maximumTrackTintColor={COLORS.lightGray}
-                thumbTintColor={COLORS.accent}
+                minimumTrackTintColor={COLORS.red600}
+                maximumTrackTintColor={COLORS.stone300}
+                thumbTintColor={COLORS.red600}
               />
               <View style={styles.sliderValues}>
                 <Text style={styles.sliderValueText}>RM 5</Text>
@@ -224,9 +231,9 @@ export default function SoloBudgetScreen() {
                   const newMax = value <= minBudget ? minBudget + 5 : value;
                   setMaxBudget(Math.min(200, newMax));
                 }}
-                minimumTrackTintColor={COLORS.accent}
-                maximumTrackTintColor={COLORS.lightGray}
-                thumbTintColor={COLORS.accent}
+                minimumTrackTintColor={COLORS.red600}
+                maximumTrackTintColor={COLORS.stone300}
+                thumbTintColor={COLORS.red600}
               />
               <View style={styles.sliderValues}>
                 <Text style={styles.sliderValueText}>RM 10</Text>
@@ -269,7 +276,7 @@ export default function SoloBudgetScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -283,16 +290,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: COLORS.darkGray,
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.red600,
+    marginBottom: 8,
+    letterSpacing: 2,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
-    marginBottom: 30,
+    color: COLORS.stone500,
+    marginBottom: 32,
     lineHeight: 24,
   },
   scrollView: {
@@ -302,10 +309,15 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   budgetContainer: {
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     padding: 24,
     marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   budgetRow: {
     flexDirection: 'row',
@@ -319,14 +331,13 @@ const styles = StyleSheet.create({
   budgetLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     marginBottom: 8,
   },
   budgetValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.accent,
+    fontSize: 32,
+    fontWeight: '900',
+    color: COLORS.red600,
   },
   sliderContainer: {
     marginBottom: 32,
@@ -334,7 +345,7 @@ const styles = StyleSheet.create({
   sliderLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
     marginBottom: 16,
   },
   slider: {
@@ -349,48 +360,51 @@ const styles = StyleSheet.create({
   sliderValueText: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.5,
+    color: COLORS.stone500,
   },
   footerSpacer: {
-    height: 120,
+    height: 160,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.lightGray,
+    paddingTop: 16,
+    paddingBottom: 100,
   },
   successMessage: {
     textAlign: 'center',
-    color: '#4CAF50',
+    color: COLORS.green500,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 12,
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   continueButtonSuccess: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.green500,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.white,
+    letterSpacing: 1,
   },
 });
 

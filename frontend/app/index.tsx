@@ -5,17 +5,17 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { PacManLoader } from '../components/PacManLoader';
 
 const COLORS = {
-  white: '#FFFFFF',
+  stone50: '#fafaf9',
 };
 
 export default function PreloaderScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    // Navigate to login/register after 3 seconds
+    // Navigate to login/register after 4 seconds (matching new UI timing)
     const timer = setTimeout(() => {
       router.replace('/auth/login');
-    }, 3000);
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [router]);
@@ -34,7 +34,7 @@ export default function PreloaderScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     justifyContent: 'center',
     alignItems: 'center',
   },

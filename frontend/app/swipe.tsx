@@ -34,10 +34,15 @@ const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
-  green: '#00C853',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  green500: '#22c55e',
+  rose100: '#ffe4e6',
 };
 
 type Restaurant = {
@@ -257,7 +262,7 @@ export default function SwipeScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()}>
-          <ChevronLeft size={28} color={COLORS.darkGray} />
+          <ChevronLeft size={28} color={COLORS.stone700} />
         </Pressable>
         {params.roomCode && (
           <View style={styles.roomCodeContainer}>
@@ -341,14 +346,14 @@ export default function SwipeScreen() {
           style={styles.actionButton}
           onPress={() => handleSwipe('left')}
         >
-          <X size={32} color={COLORS.accent} strokeWidth={2.5} />
+          <X size={32} color={COLORS.red600} strokeWidth={2.5} />
         </AnimatedPressable>
 
         <AnimatedPressable
           style={[styles.actionButton, styles.likeButton]}
           onPress={() => handleSwipe('right')}
         >
-          <Heart size={32} color={COLORS.green} strokeWidth={2.5} />
+          <Heart size={32} color={COLORS.green500} strokeWidth={2.5} />
         </AnimatedPressable>
       </View>
 
@@ -361,7 +366,7 @@ export default function SwipeScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>{currentRestaurant.name}</Text>
             <Pressable onPress={() => setShowModal(false)}>
-              <X size={28} color={COLORS.darkGray} />
+              <X size={28} color={COLORS.stone700} />
             </Pressable>
           </View>
 
@@ -390,7 +395,7 @@ export default function SwipeScreen() {
 
               <View style={styles.modalMeta}>
                 <View style={styles.modalMetaItem}>
-                  <MapPin size={18} color={COLORS.darkGray} />
+                  <MapPin size={18} color={COLORS.stone700} />
                   <Text style={styles.modalMetaText}>
                     {currentRestaurant.address}
                   </Text>
@@ -427,7 +432,7 @@ export default function SwipeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
   },
   header: {
     flexDirection: 'row',
@@ -438,7 +443,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   roomCodeContainer: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.rose100,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -446,19 +451,18 @@ const styles = StyleSheet.create({
   roomCodeLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     textAlign: 'center',
   },
   roomCode: {
     fontSize: 16,
     fontWeight: '800',
-    color: COLORS.darkGray,
+    color: COLORS.red600,
     letterSpacing: 2,
     textAlign: 'center',
   },
   progressContainer: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone200,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
@@ -466,7 +470,7 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   cardsContainer: {
     flex: 1,
@@ -503,7 +507,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     right: 40,
-    backgroundColor: COLORS.green,
+    backgroundColor: COLORS.green500,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -515,7 +519,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     left: 40,
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -596,7 +600,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 40,
-    paddingBottom: 60,
+    paddingBottom: 100,
   },
   actionButton: {
     width: 68,
@@ -614,37 +618,37 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 5,
     borderWidth: 2,
-    borderColor: COLORS.accent,
+    borderColor: COLORS.red600,
   },
   likeButton: {
-    borderColor: COLORS.green,
+    borderColor: COLORS.green500,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
   },
   loadingText: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingHorizontal: 24,
   },
   emptyText: {
     fontSize: 20,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
     marginBottom: 20,
   },
   backButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -666,23 +670,42 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomColor: COLORS.stone100,
+    backgroundColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     flex: 1,
+    letterSpacing: 0.5,
   },
   modalContent: {
     flex: 1,
+    backgroundColor: COLORS.stone50,
   },
   modalImage: {
     width: '100%',
-    height: 300,
+    height: 280,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   modalInfo: {
     padding: 24,
+    backgroundColor: COLORS.white,
+    marginTop: 16,
+    marginHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   modalRow: {
     flexDirection: 'row',
@@ -693,22 +716,21 @@ const styles = StyleSheet.create({
   modalRating: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   modalSeparator: {
     fontSize: 18,
-    color: COLORS.darkGray,
-    opacity: 0.3,
+    color: COLORS.stone500,
   },
   modalPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   modalCuisine: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   modalMeta: {
     gap: 12,
@@ -722,13 +744,12 @@ const styles = StyleSheet.create({
   modalMetaText: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.7,
+    color: COLORS.stone500,
   },
   menuPhotosLabel: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 12,
   },
   menuPhotosScroll: {

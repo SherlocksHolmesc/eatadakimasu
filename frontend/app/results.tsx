@@ -19,9 +19,14 @@ const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  rose100: '#ffe4e6',
   gold: '#FFD700',
   silver: '#C0C0C0',
   bronze: '#CD7F32',
@@ -107,7 +112,7 @@ export default function ResultsScreen() {
         entering={FadeInDown.delay(100).springify()}
       >
         <View style={styles.headerContent}>
-          <Trophy size={32} color={COLORS.accent} strokeWidth={2.5} />
+          <Trophy size={32} color={COLORS.red600} strokeWidth={2.5} />
           <Text style={styles.title}>
             {params.mode === 'solo' ? 'Your Picks' : 'Group Results'}
           </Text>
@@ -175,7 +180,7 @@ export default function ResultsScreen() {
                   <View
                     style={[
                       styles.rankBadgeInner,
-                      { backgroundColor: COLORS.darkGray },
+                      { backgroundColor: COLORS.stone700 },
                     ]}
                   >
                     <Text style={styles.rankText}>{index + 1}</Text>
@@ -211,7 +216,7 @@ export default function ResultsScreen() {
 
                 <View style={styles.metaRow}>
                   <View style={styles.metaItem}>
-                    <MapPin size={12} color={COLORS.darkGray} />
+                    <MapPin size={12} color={COLORS.stone500} />
                     <Text style={styles.metaText} numberOfLines={1}>
                       {restaurant.address}
                     </Text>
@@ -262,14 +267,15 @@ export default function ResultsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
   },
   header: {
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomColor: COLORS.stone200,
+    backgroundColor: COLORS.white,
   },
   headerContent: {
     flexDirection: 'row',
@@ -278,21 +284,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: COLORS.darkGray,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.red600,
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 120,
+    paddingBottom: 160,
   },
   restaurantCard: {
     backgroundColor: COLORS.white,
@@ -308,7 +314,7 @@ const styles = StyleSheet.create({
     elevation: 5,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.stone200,
   },
   rankBadge: {
     position: 'absolute',
@@ -346,7 +352,7 @@ const styles = StyleSheet.create({
   restaurantName: {
     fontSize: 22,
     fontWeight: '800',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 8,
   },
   infoRow: {
@@ -363,22 +369,21 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   separator: {
     fontSize: 14,
-    color: COLORS.darkGray,
-    opacity: 0.3,
+    color: COLORS.stone500,
   },
   price: {
     fontSize: 14,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   cuisine: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   metaRow: {
     flexDirection: 'row',
@@ -393,8 +398,7 @@ const styles = StyleSheet.create({
   metaText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     flex: 1,
   },
   voteContainer: {
@@ -402,21 +406,20 @@ const styles = StyleSheet.create({
   },
   voteBar: {
     height: 8,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone200,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 6,
   },
   voteBarFill: {
     height: '100%',
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     borderRadius: 4,
   },
   voteText: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
   },
   emptyContainer: {
     flex: 1,
@@ -427,7 +430,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
     textAlign: 'center',
     lineHeight: 28,
   },
@@ -439,36 +442,40 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.lightGray,
+    paddingTop: 16,
+    paddingBottom: 100,
   },
   startOverButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   startOverButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.white,
+    letterSpacing: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
   },
   loadingText: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
 });

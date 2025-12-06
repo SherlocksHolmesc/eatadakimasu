@@ -7,6 +7,7 @@ import {
   Pressable,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -17,10 +18,20 @@ import { api } from '../../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone400: '#a8a29e',
+  stone500: '#78716c',
+  stone600: '#57534e',
+  stone900: '#1c1917',
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  red50: '#fef2f2',
+  red600: '#dc2626',
+  red700: '#b91c1c',
+  rose500: '#f43f5e',
+  pink500: '#ec4899',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -129,9 +140,12 @@ export default function RoomScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      {/* Background decorations */}
+      <View style={styles.bgDecoration1} />
+      
       <Pressable style={styles.backButton} onPress={handleBack}>
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone600} />
       </Pressable>
 
       <Animated.View
@@ -148,31 +162,41 @@ export default function RoomScreen() {
 
             <View style={styles.optionsContainer}>
               <AnimatedPressable
-                style={styles.optionButton}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  pressed && styles.optionButtonPressed,
+                ]}
                 onPress={() => setMode('create')}
                 entering={FadeInDown.delay(200).springify()}
               >
-                <View style={styles.optionIcon}>
-                  <Plus size={28} color={COLORS.accent} strokeWidth={2.5} />
+                <View style={[styles.optionIcon, styles.optionIconCreate]}>
+                  <Plus size={32} color={COLORS.red600} strokeWidth={2.5} />
                 </View>
-                <Text style={styles.optionTitle}>Create Room</Text>
-                <Text style={styles.optionSubtitle}>
-                  Start a new group session
-                </Text>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Create Room</Text>
+                  <Text style={styles.optionSubtitle}>
+                    Start a new group session
+                  </Text>
+                </View>
               </AnimatedPressable>
 
               <AnimatedPressable
-                style={styles.optionButton}
+                style={({ pressed }) => [
+                  styles.optionButton,
+                  pressed && styles.optionButtonPressed,
+                ]}
                 onPress={() => setMode('join')}
                 entering={FadeInDown.delay(300).springify()}
               >
-                <View style={styles.optionIcon}>
-                  <LogIn size={28} color={COLORS.accent} strokeWidth={2.5} />
+                <View style={[styles.optionIcon, styles.optionIconJoin]}>
+                  <LogIn size={32} color={COLORS.red600} strokeWidth={2.5} />
                 </View>
-                <Text style={styles.optionTitle}>Join Room</Text>
-                <Text style={styles.optionSubtitle}>
-                  Enter a room code to join
-                </Text>
+                <View style={styles.optionTextContainer}>
+                  <Text style={styles.optionTitle}>Join Room</Text>
+                  <Text style={styles.optionSubtitle}>
+                    Enter a room code to join
+                  </Text>
+                </View>
               </AnimatedPressable>
             </View>
           </>
@@ -183,16 +207,24 @@ export default function RoomScreen() {
             <Text style={styles.description}>
               Create a room and share the code with your friends
             </Text>
-            <AnimatedPressable
-              style={[styles.primaryButton, loading && styles.buttonDisabled]}
-              onPress={handleCreateRoom}
-              disabled={loading}
+            <Animated.View 
+              style={styles.createButtonContainer}
               entering={FadeInDown.delay(200).springify()}
             >
-              <Text style={styles.primaryButtonText}>
-                {loading ? 'Creating...' : 'Create Room'}
-              </Text>
-            </AnimatedPressable>
+              <Pressable
+                style={[
+                  styles.primaryButton,
+                  loading && styles.buttonDisabled,
+                ]}
+                onPress={handleCreateRoom}
+                disabled={loading}
+              >
+                <Plus size={20} color={COLORS.white} style={{ marginRight: 8 }} />
+                <Text style={styles.primaryButtonText}>
+                  {loading ? 'Creating...' : 'Create Room'}
+                </Text>
+              </Pressable>
+            </Animated.View>
           </>
         )}
 
@@ -201,11 +233,14 @@ export default function RoomScreen() {
             <Text style={styles.description}>
               Enter the 6-character room code shared by your friend
             </Text>
-            <Animated.View entering={FadeInDown.delay(200).springify()}>
+            <Animated.View 
+              style={styles.inputCard}
+              entering={FadeInDown.delay(200).springify()}
+            >
               <TextInput
                 style={styles.input}
                 placeholder="ROOM CODE"
-                placeholderTextColor={`${COLORS.darkGray}40`}
+                placeholderTextColor={COLORS.stone300}
                 value={roomCode}
                 onChangeText={(text) => setRoomCode(text.toUpperCase())}
                 maxLength={6}
@@ -213,10 +248,12 @@ export default function RoomScreen() {
                 autoCorrect={false}
               />
             </Animated.View>
+            <Text style={styles.charCount}>{roomCode.length}/6 characters</Text>
             <AnimatedPressable
-              style={[
+              style={({ pressed }) => [
                 styles.primaryButton,
                 (loading || roomCode.length !== 6) && styles.buttonDisabled,
+                pressed && styles.primaryButtonPressed,
               ]}
               onPress={handleJoinRoom}
               disabled={loading || roomCode.length !== 6}
@@ -229,16 +266,29 @@ export default function RoomScreen() {
           </>
         )}
       </Animated.View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingTop: 60,
     paddingHorizontal: 24,
+    paddingBottom: 100,
+  },
+  bgDecoration1: {
+    position: 'absolute',
+    top: '5%',
+    right: '-20%',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(220, 38, 38, 0.08)',
   },
   backButton: {
     width: 44,
@@ -250,81 +300,121 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: COLORS.darkGray,
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.stone900,
+    marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
-    marginBottom: 40,
+    color: COLORS.stone500,
+    marginBottom: 32,
     lineHeight: 24,
   },
   optionsContainer: {
-    gap: 16,
+    gap: 24,
   },
   optionButton: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  optionButtonPressed: {
+    backgroundColor: COLORS.red50,
+    borderColor: COLORS.red600,
+    transform: [{ scale: 0.98 }],
   },
   optionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: `${COLORS.accent}10`,
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
+  optionIconCreate: {
+    backgroundColor: COLORS.red50,
+  },
+  optionIconJoin: {
+    backgroundColor: COLORS.red50,
+  },
+  optionTextContainer: {
+    flex: 1,
+  },
   optionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 4,
   },
   optionSubtitle: {
     fontSize: 14,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
+  },
+  inputCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: 16,
   },
   input: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone50,
     borderRadius: 16,
     padding: 20,
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.darkGray,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.stone900,
     textAlign: 'center',
-    letterSpacing: 4,
-    marginBottom: 20,
+    letterSpacing: 8,
+  },
+  charCount: {
+    textAlign: 'center',
+    color: COLORS.stone500,
+    marginBottom: 24,
   },
   primaryButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: COLORS.red600,
+    borderRadius: 32,
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    minHeight: 56,
+  },
+  primaryButtonPressed: {
+    backgroundColor: COLORS.red700,
+    transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   primaryButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.white,
+  },
+  createButtonContainer: {
+    marginTop: 16,
   },
 });
 

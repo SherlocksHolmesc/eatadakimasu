@@ -4,6 +4,20 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
+const COLORS = {
+  white: '#FFFFFF',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  rose100: '#ffe4e6',
+  green500: '#22c55e',
+};
+
 export default function PreferencesWaitingScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -52,7 +66,7 @@ export default function PreferencesWaitingScreen() {
   return (
     <View style={styles.container}>
       {/* Logo */}
-      <Text style={styles.logo}>Eatadakimasu</Text>
+      <Text style={styles.logo}>EATADAKIMASU</Text>
 
       {/* Title */}
       <Text style={styles.title}>
@@ -125,27 +139,29 @@ export default function PreferencesWaitingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.stone50,
     padding: 24,
+    paddingBottom: 100,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.stone500,
     textAlign: 'center',
     marginTop: 100,
   },
   logo: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff2346',
+    fontWeight: '900',
+    color: COLORS.red600,
     textAlign: 'center',
     marginTop: 60,
     marginBottom: 40,
+    letterSpacing: 2,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '800',
+    color: COLORS.stone900,
     textAlign: 'center',
     marginBottom: 30,
   },
@@ -154,20 +170,20 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.stone500,
     textAlign: 'center',
     marginBottom: 12,
     fontWeight: '600',
   },
   progressBar: {
     height: 12,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: COLORS.stone200,
     borderRadius: 6,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#ff2346',
+    backgroundColor: COLORS.red600,
     borderRadius: 6,
   },
   membersContainer: {
@@ -176,8 +192,8 @@ const styles = StyleSheet.create({
   },
   membersTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: COLORS.stone700,
     marginBottom: 12,
   },
   membersList: {
@@ -188,9 +204,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: COLORS.white,
     borderRadius: 12,
     marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   memberInfo: {
     flex: 1,
@@ -198,51 +219,52 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.stone900,
     marginBottom: 4,
   },
   cuisinePreview: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.stone500,
     fontStyle: 'italic',
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: COLORS.stone300,
   },
   statusBadgeReady: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.green500,
   },
   statusText: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: COLORS.white,
   },
   allReadyContainer: {
     padding: 16,
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.green500,
     borderRadius: 12,
     marginBottom: 20,
   },
   allReadyText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: COLORS.white,
     textAlign: 'center',
   },
   backButton: {
     padding: 16,
     borderWidth: 2,
-    borderColor: '#ff2346',
+    borderColor: COLORS.red600,
     borderRadius: 12,
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#ff2346',
+    color: COLORS.red600,
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });
 

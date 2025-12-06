@@ -20,9 +20,17 @@ import { ArrowLeft } from 'lucide-react-native';
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  rose100: '#ffe4e6',
+  rose500: '#f43f5e',
+  green500: '#22c55e',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -270,14 +278,14 @@ export default function PreferencesScreen() {
         style={styles.backButton}
         onPress={() => router.back()}
       >
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
         style={styles.header}
         entering={FadeInDown.delay(100).springify()}
       >
-        <Text style={styles.title}>Preferences</Text>
+        <Text style={styles.title}>PREFERENCES</Text>
         <Text style={styles.description}>
           Set your location, food preferences, and budget
         </Text>
@@ -304,7 +312,7 @@ export default function PreferencesScreen() {
           <TextInput
             style={styles.input}
             placeholder="Enter your location"
-            placeholderTextColor={`${COLORS.darkGray}60`}
+            placeholderTextColor={COLORS.stone500}
             value={location}
             onChangeText={setLocation}
           />
@@ -373,9 +381,9 @@ export default function PreferencesScreen() {
                   const newMin = value >= maxBudget ? maxBudget - 5 : value;
                   setMinBudget(Math.max(5, newMin));
                 }}
-                minimumTrackTintColor={COLORS.accent}
-                maximumTrackTintColor={COLORS.lightGray}
-                thumbTintColor={COLORS.accent}
+                minimumTrackTintColor={COLORS.red600}
+                maximumTrackTintColor={COLORS.stone300}
+                thumbTintColor={COLORS.red600}
               />
               <View style={styles.sliderValues}>
                 <Text style={styles.sliderValueText}>RM 5</Text>
@@ -397,9 +405,9 @@ export default function PreferencesScreen() {
                   const newMax = value <= minBudget ? minBudget + 5 : value;
                   setMaxBudget(Math.min(200, newMax));
                 }}
-                minimumTrackTintColor={COLORS.accent}
-                maximumTrackTintColor={COLORS.lightGray}
-                thumbTintColor={COLORS.accent}
+                minimumTrackTintColor={COLORS.red600}
+                maximumTrackTintColor={COLORS.stone300}
+                thumbTintColor={COLORS.red600}
               />
               <View style={styles.sliderValues}>
                 <Text style={styles.sliderValueText}>RM 10</Text>
@@ -443,7 +451,7 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -454,25 +462,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: COLORS.darkGray,
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.red600,
+    marginBottom: 8,
+    letterSpacing: 2,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     lineHeight: 24,
     marginBottom: 16,
   },
   roomCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${COLORS.accent}10`,
+    backgroundColor: COLORS.rose100,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -480,14 +488,13 @@ const styles = StyleSheet.create({
   },
   roomCodeLabel: {
     fontSize: 14,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone700,
     fontWeight: '600',
   },
   roomCode: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.accent,
+    color: COLORS.red600,
     letterSpacing: 2,
   },
   scrollView: {
@@ -502,18 +509,18 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
     marginBottom: 16,
   },
   input: {
     height: 56,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.stone200,
     borderRadius: 16,
     paddingHorizontal: 20,
     fontSize: 16,
     backgroundColor: COLORS.white,
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   cuisineGrid: {
     flexDirection: 'row',
@@ -523,16 +530,21 @@ const styles = StyleSheet.create({
   cuisineButton: {
     width: '30%',
     aspectRatio: 1,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.white,
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: COLORS.stone200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   cuisineButtonSelected: {
-    backgroundColor: `${COLORS.accent}10`,
-    borderColor: COLORS.accent,
+    backgroundColor: COLORS.rose100,
+    borderColor: COLORS.red600,
   },
   cuisineIcon: {
     fontSize: 36,
@@ -541,18 +553,21 @@ const styles = StyleSheet.create({
   cuisineLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.7,
+    color: COLORS.stone500,
   },
   cuisineLabelSelected: {
-    color: COLORS.accent,
-    opacity: 1,
+    color: COLORS.red600,
     fontWeight: '700',
   },
   budgetContainer: {
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.white,
     padding: 20,
     borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   budgetRow: {
     flexDirection: 'row',
@@ -566,14 +581,13 @@ const styles = StyleSheet.create({
   budgetLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     marginBottom: 8,
   },
   budgetValue: {
     fontSize: 28,
-    fontWeight: '800',
-    color: COLORS.accent,
+    fontWeight: '900',
+    color: COLORS.red600,
   },
   sliderContainer: {
     marginBottom: 32,
@@ -581,7 +595,7 @@ const styles = StyleSheet.create({
   sliderLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
     marginBottom: 16,
   },
   slider: {
@@ -596,46 +610,48 @@ const styles = StyleSheet.create({
   sliderValueText: {
     fontSize: 12,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.5,
+    color: COLORS.stone500,
   },
   footerSpacer: {
-    height: 120,
+    height: 160,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.lightGray,
+    paddingTop: 16,
+    paddingBottom: 100,
   },
   successMessage: {
     textAlign: 'center',
-    color: '#4CAF50',
+    color: COLORS.green500,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 12,
   },
   nextButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   nextButtonSuccess: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.green500,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   memberProgress: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: COLORS.stone100,
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
@@ -643,7 +659,7 @@ const styles = StyleSheet.create({
   memberProgressTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.stone900,
     marginBottom: 12,
   },
   memberItem: {
@@ -654,16 +670,17 @@ const styles = StyleSheet.create({
   },
   memberName: {
     fontSize: 14,
-    color: '#333',
+    color: COLORS.stone900,
   },
   memberStatus: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.stone500,
     fontWeight: '500',
   },
   nextButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
 });

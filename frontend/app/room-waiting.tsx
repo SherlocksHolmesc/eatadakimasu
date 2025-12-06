@@ -9,9 +9,16 @@ import { ArrowLeft } from 'lucide-react-native';
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  rose100: '#ffe4e6',
+  green500: '#22c55e',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -211,7 +218,7 @@ export default function RoomWaitingScreen() {
         style={styles.backButton}
         onPress={handleLeave}
       >
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
@@ -322,7 +329,7 @@ export default function RoomWaitingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -336,22 +343,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: COLORS.darkGray,
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.red600,
+    marginBottom: 8,
+    letterSpacing: 2,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     marginBottom: 40,
     lineHeight: 24,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     textAlign: 'center',
     marginTop: 100,
   },
@@ -362,7 +368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: COLORS.accent,
+    borderColor: COLORS.red600,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -374,21 +380,20 @@ const styles = StyleSheet.create({
   },
   roomCodeLabel: {
     fontSize: 12,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     fontWeight: '600',
     marginBottom: 12,
     letterSpacing: 1,
   },
   roomCode: {
     fontSize: 42,
-    fontWeight: '800',
-    color: COLORS.accent,
+    fontWeight: '900',
+    color: COLORS.red600,
     letterSpacing: 6,
     marginBottom: 20,
   },
   shareButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
@@ -407,7 +412,7 @@ const styles = StyleSheet.create({
   membersTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
     marginBottom: 16,
   },
   membersList: {
@@ -422,7 +427,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.stone200,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -438,67 +443,80 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   readyIndicator: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 16,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone200,
   },
   readyIndicatorActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.green500,
   },
   readyText: {
     fontSize: 12,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   readyTextActive: {
     color: COLORS.white,
   },
   readyButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   readyButtonActive: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: COLORS.green500,
+    shadowColor: COLORS.green500,
   },
   readyButtonText: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 1,
   },
   startButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   startButtonDisabled: {
-    backgroundColor: COLORS.lightGray,
-    opacity: 0.5,
+    backgroundColor: COLORS.stone300,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
   },
   startButtonText: {
     color: COLORS.white,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
+    letterSpacing: 1,
   },
   waitingForHost: {
     padding: 16,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone100,
     borderRadius: 16,
     alignItems: 'center',
   },
   waitingText: {
     fontSize: 14,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     fontStyle: 'italic',
   },
 });

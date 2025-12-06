@@ -20,9 +20,16 @@ import { ArrowLeft, MapPin, Navigation, Search } from 'lucide-react-native';
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  rose100: '#ffe4e6',
+  rose500: '#f43f5e',
+  rose600: '#e11d48',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -277,7 +284,7 @@ export default function LocationScreen() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
@@ -301,7 +308,7 @@ export default function LocationScreen() {
             <View style={styles.gpsIcon}>
               <Navigation
                 size={24}
-                color={COLORS.accent}
+                color={COLORS.rose600}
                 strokeWidth={2.5}
               />
             </View>
@@ -327,13 +334,13 @@ export default function LocationScreen() {
           <View style={styles.inputContainer}>
             <Search
               size={20}
-              color={COLORS.darkGray}
+              color={COLORS.stone500}
               style={styles.inputIcon}
             />
             <TextInput
               style={styles.input}
               placeholder="Search for a location..."
-              placeholderTextColor={`${COLORS.darkGray}40`}
+              placeholderTextColor={COLORS.stone500}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCorrect={false}
@@ -344,7 +351,7 @@ export default function LocationScreen() {
               }}
             />
             {loadingPredictions && (
-              <ActivityIndicator size="small" color={COLORS.accent} style={{ marginLeft: 8 }} />
+              <ActivityIndicator size="small" color={COLORS.rose600} style={{ marginLeft: 8 }} />
             )}
           </View>
 
@@ -359,7 +366,7 @@ export default function LocationScreen() {
                     style={styles.predictionItem}
                     onPress={() => handleSelectPlace(item)}
                   >
-                    <MapPin size={16} color={COLORS.accent} style={{ marginRight: 12 }} />
+                    <MapPin size={16} color={COLORS.rose600} style={{ marginRight: 12 }} />
                     <View style={styles.predictionTextContainer}>
                       <Text style={styles.predictionMainText}>
                         {item.structured_formatting.main_text}
@@ -379,7 +386,7 @@ export default function LocationScreen() {
           {/* Show selected address */}
           {selectedPlace && address && (
             <View style={styles.selectedAddressContainer}>
-              <MapPin size={16} color={COLORS.accent} />
+              <MapPin size={16} color={COLORS.rose600} />
               <Text style={styles.selectedAddressText} numberOfLines={2}>
                 {address}
               </Text>
@@ -412,7 +419,7 @@ export default function LocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -428,13 +435,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: '800',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 12,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     marginBottom: 40,
     lineHeight: 24,
   },
@@ -456,13 +462,13 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.stone200,
   },
   gpsIcon: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: `${COLORS.accent}10`,
+    backgroundColor: COLORS.rose100,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -473,13 +479,12 @@ const styles = StyleSheet.create({
   gpsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 2,
   },
   gpsSubtitle: {
     fontSize: 13,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
   },
   divider: {
     flexDirection: 'row',
@@ -489,31 +494,29 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone200,
   },
   dividerText: {
     paddingHorizontal: 16,
     fontSize: 14,
-    color: COLORS.darkGray,
-    opacity: 0.4,
+    color: COLORS.stone500,
     fontWeight: '600',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone100,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 18,
   },
   inputIcon: {
     marginRight: 12,
-    opacity: 0.5,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
   },
   footer: {
     position: 'absolute',
@@ -522,7 +525,7 @@ const styles = StyleSheet.create({
     right: 0,
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -550,14 +553,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.stone200,
   },
   predictionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomColor: COLORS.stone100,
   },
   predictionTextContainer: {
     flex: 1,
@@ -565,18 +568,17 @@ const styles = StyleSheet.create({
   predictionMainText: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 2,
   },
   predictionSecondaryText: {
     fontSize: 13,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
   },
   selectedAddressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${COLORS.accent}10`,
+    backgroundColor: COLORS.rose100,
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
@@ -585,7 +587,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.accent,
+    color: COLORS.rose600,
     marginLeft: 8,
   },
 });

@@ -15,9 +15,16 @@ import { ArrowLeft, Check } from 'lucide-react-native';
 
 const COLORS = {
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone900: '#1c1917',
+  red600: '#dc2626',
+  rose100: '#ffe4e6',
+  rose500: '#f43f5e',
+  rose600: '#e11d48',
 };
 
 const CUISINES = [
@@ -91,7 +98,7 @@ export default function PreferencesScreen() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
@@ -170,7 +177,7 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -186,13 +193,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 36,
     fontWeight: '800',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 12,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     lineHeight: 24,
   },
   scrollView: {
@@ -209,7 +215,7 @@ const styles = StyleSheet.create({
   cuisineChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone100,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 12,
@@ -217,8 +223,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   cuisineChipSelected: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+    backgroundColor: COLORS.rose600,
+    borderColor: COLORS.rose600,
   },
   checkIcon: {
     marginRight: 6,
@@ -226,7 +232,7 @@ const styles = StyleSheet.create({
   cuisineText: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   cuisineTextSelected: {
     color: COLORS.white,
@@ -239,23 +245,22 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: COLORS.lightGray,
+    borderTopColor: COLORS.stone200,
   },
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     textAlign: 'center',
     marginBottom: 12,
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',

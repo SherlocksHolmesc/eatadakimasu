@@ -10,6 +10,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -19,10 +20,25 @@ import Constants from 'expo-constants';
 import { ArrowLeft, MapPin, Navigation, Search } from 'lucide-react-native';
 
 const COLORS = {
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone400: '#a8a29e',
+  stone500: '#78716c',
+  stone600: '#57534e',
+  stone700: '#44403c',
+  stone900: '#1c1917',
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  red50: '#fef2f2',
+  red100: '#fee2e2',
+  red200: '#fecaca',
+  red600: '#dc2626',
+  red700: '#b91c1c',
+  rose100: '#ffe4e6',
+  rose200: '#fecdd3',
+  rose500: '#f43f5e',
+  rose600: '#e11d48',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -277,7 +293,7 @@ export default function SoloLocationScreen() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
@@ -301,7 +317,7 @@ export default function SoloLocationScreen() {
             <View style={styles.gpsIcon}>
               <Navigation
                 size={24}
-                color={COLORS.accent}
+                color={COLORS.rose600}
                 strokeWidth={2.5}
               />
             </View>
@@ -327,13 +343,13 @@ export default function SoloLocationScreen() {
           <View style={styles.inputContainer}>
             <Search
               size={20}
-              color={COLORS.darkGray}
+              color={COLORS.stone500}
               style={styles.inputIcon}
             />
             <TextInput
               style={styles.input}
               placeholder="Search for a location..."
-              placeholderTextColor={`${COLORS.darkGray}40`}
+              placeholderTextColor={COLORS.stone500}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCorrect={false}
@@ -344,7 +360,7 @@ export default function SoloLocationScreen() {
               }}
             />
             {loadingPredictions && (
-              <ActivityIndicator size="small" color={COLORS.accent} style={{ marginLeft: 8 }} />
+              <ActivityIndicator size="small" color={COLORS.rose600} style={{ marginLeft: 8 }} />
             )}
           </View>
 
@@ -359,7 +375,7 @@ export default function SoloLocationScreen() {
                     style={styles.predictionItem}
                     onPress={() => handleSelectPlace(item)}
                   >
-                    <MapPin size={16} color={COLORS.accent} style={{ marginRight: 12 }} />
+                    <MapPin size={16} color={COLORS.rose600} style={{ marginRight: 12 }} />
                     <View style={styles.predictionTextContainer}>
                       <Text style={styles.predictionMainText}>
                         {item.structured_formatting.main_text}
@@ -379,7 +395,7 @@ export default function SoloLocationScreen() {
           {/* Show selected address */}
           {selectedPlace && address && (
             <View style={styles.selectedAddressContainer}>
-              <MapPin size={16} color={COLORS.accent} />
+              <MapPin size={16} color={COLORS.rose600} />
               <Text style={styles.selectedAddressText} numberOfLines={2}>
                 {address}
               </Text>
@@ -412,7 +428,7 @@ export default function SoloLocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -426,43 +442,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: COLORS.darkGray,
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.stone900,
+    marginBottom: 8,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
-    marginBottom: 40,
+    color: COLORS.stone500,
+    marginBottom: 32,
     lineHeight: 24,
   },
   gpsButton: {
-    marginBottom: 30,
+    marginBottom: 24,
   },
   gpsButtonInner: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    borderWidth: 2,
+    borderColor: COLORS.stone100,
   },
   gpsIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: `${COLORS.accent}10`,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: COLORS.rose100,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -473,47 +488,44 @@ const styles = StyleSheet.create({
   gpsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: COLORS.darkGray,
-    marginBottom: 2,
+    color: COLORS.stone900,
+    marginBottom: 4,
   },
   gpsSubtitle: {
-    fontSize: 13,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    fontSize: 14,
+    color: COLORS.stone500,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone200,
   },
   dividerText: {
     paddingHorizontal: 16,
     fontSize: 14,
-    color: COLORS.darkGray,
-    opacity: 0.4,
-    fontWeight: '600',
+    color: COLORS.stone500,
+    fontWeight: '500',
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone100,
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 18,
   },
   inputIcon: {
     marginRight: 12,
-    opacity: 0.5,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    color: COLORS.darkGray,
+    color: COLORS.stone700,
   },
   footer: {
     position: 'absolute',
@@ -522,42 +534,47 @@ const styles = StyleSheet.create({
     right: 0,
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: COLORS.rose500,
+    borderRadius: 32,
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.rose500,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.white,
   },
   predictionsContainer: {
     marginTop: 8,
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 16,
     maxHeight: 300,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 12,
     elevation: 5,
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: COLORS.stone100,
   },
   predictionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomColor: COLORS.stone100,
   },
   predictionTextContainer: {
     flex: 1,
@@ -565,18 +582,17 @@ const styles = StyleSheet.create({
   predictionMainText: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.darkGray,
+    color: COLORS.stone900,
     marginBottom: 2,
   },
   predictionSecondaryText: {
     fontSize: 13,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
   },
   selectedAddressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${COLORS.accent}10`,
+    backgroundColor: COLORS.rose100,
     borderRadius: 12,
     padding: 12,
     marginTop: 12,
@@ -585,7 +601,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.accent,
+    color: COLORS.rose600,
     marginLeft: 8,
   },
 });

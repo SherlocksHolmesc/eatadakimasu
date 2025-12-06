@@ -14,10 +14,18 @@ import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Check } from 'lucide-react-native';
 
 const COLORS = {
+  stone50: '#fafaf9',
+  stone100: '#f5f5f4',
+  stone200: '#e7e5e4',
+  stone300: '#d6d3d1',
+  stone400: '#a8a29e',
+  stone500: '#78716c',
+  stone700: '#44403c',
+  stone800: '#292524',
+  stone900: '#1c1917',
   white: '#FFFFFF',
-  accent: '#ff2346',
-  lightGray: '#f5f5f5',
-  darkGray: '#333333',
+  red600: '#dc2626',
+  red700: '#b91c1c',
 };
 
 const CUISINES = [
@@ -91,7 +99,7 @@ export default function SoloPreferencesScreen() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <ArrowLeft size={24} color={COLORS.darkGray} />
+        <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
       <Animated.View
@@ -170,7 +178,7 @@ export default function SoloPreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -181,18 +189,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: COLORS.darkGray,
-    marginBottom: 12,
+    fontSize: 28,
+    fontWeight: '900',
+    color: COLORS.red600,
+    marginBottom: 8,
+    letterSpacing: 2,
   },
   description: {
     fontSize: 16,
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     lineHeight: 24,
   },
   scrollView: {
@@ -209,65 +217,68 @@ const styles = StyleSheet.create({
   cuisineChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: COLORS.stone200,
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: COLORS.stone200,
   },
   cuisineChipSelected: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
+    borderColor: COLORS.red600,
   },
   checkIcon: {
     marginRight: 6,
   },
   cuisineText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.darkGray,
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.stone700,
   },
   cuisineTextSelected: {
     color: COLORS.white,
   },
   footerSpacer: {
-    height: 120,
+    height: 160,
   },
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.stone50,
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.lightGray,
+    paddingTop: 16,
+    paddingBottom: 100,
   },
   selectedCount: {
     fontSize: 14,
     fontWeight: '600',
-    color: COLORS.darkGray,
-    opacity: 0.6,
+    color: COLORS.stone500,
     textAlign: 'center',
     marginBottom: 12,
   },
   continueButton: {
-    backgroundColor: COLORS.accent,
+    backgroundColor: COLORS.red600,
     borderRadius: 16,
-    padding: 20,
+    padding: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.white,
+    letterSpacing: 1,
   },
 });
 
