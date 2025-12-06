@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,15 @@ import {
   Pressable,
   Platform,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-import { ArrowLeft, DollarSign } from 'lucide-react-native';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { ArrowLeft } from 'lucide-react-native';
+import Slider from '@react-native-community/slider';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
   white: '#FFFFFF',
@@ -22,93 +23,94 @@ const COLORS = {
   darkGray: '#333333',
 };
 
-const PRICE_RANGES = [
-  { value: 1, label: '$', description: 'Budget-friendly' },
-  { value: 2, label: '$$', description: 'Moderate' },
-  { value: 3, label: '$$$', description: 'Upscale' },
-  { value: 4, label: '$$$$', description: 'Fine dining' },
-];
-
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function BudgetScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     roomCode?: string;
+    roomId?: string;
     mode: string;
     address: string;
     preferences: string;
   }>();
-  const [minBudget, setMinBudget] = useState(1);
-  const [maxBudget, setMaxBudget] = useState(4);
-  const [loading, setLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [minBudget, setMinBudget] = useState(10);
+  const [maxBudget, setMaxBudget] = useState(50);
+  const [isSaving, setIsSaving] = useState(false);
+  const [savedSuccessfully, setSavedSuccessfully] = useState(false);
 
-  const selectPriceRange = (value: number) => {
-    if (Platform.OS !== 'web') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+  const updateMemberPreferencesMutation = useMutation(api.rooms.updateMemberPreferences);
 
-    if (value < minBudget) {
-      setMinBudget(value);
-    } else if (value > maxBudget) {
-      setMaxBudget(value);
-    } else {
-      const distToMin = value - minBudget;
-      const distToMax = maxBudget - value;
-      if (distToMin <= distToMax) {
-        setMinBudget(value);
-      } else {
-        setMaxBudget(value);
-      }
-    }
-  };
+  useEffect(() => {
+    const getUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setCurrentUserId(id || '');
+    };
+    getUserId();
+  }, []);
 
   const handleContinue = async () => {
-    setLoading(true);
-    try {
-      const preferences = params.preferences
-        ? JSON.parse(params.preferences)
-        : [];
-      
-      // Convert price range to dollar amounts (approximate)
-      const minBudgetDollars = minBudget * 10;
-      const maxBudgetDollars = maxBudget * 25;
+    if (!params.roomId || !currentUserId) {
+      console.error('Missing roomId or userId');
+      return;
+    }
 
-      const response = await fetch(`${API_URL}/api/preferences`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          room_code: params.roomCode,
-          location: params.address,
+    const preferences = params.preferences
+      ? JSON.parse(params.preferences)
+      : [];
+
+    setIsSaving(true);
+    try {
+      // Save all preferences to Convex (location, cuisines, budget)
+      await updateMemberPreferencesMutation({
+        roomId: params.roomId as any,
+        userId: currentUserId as any,
+        preferences: {
           cuisines: preferences,
-          min_budget: minBudgetDollars,
-          max_budget: maxBudgetDollars,
-        }),
+          distance: 10, // Default distance
+          priceRange: `${minBudget}-${maxBudget}`,
+        },
       });
 
-      if (response.ok) {
-        if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
+      console.log('Preferences saved successfully!');
+      setSavedSuccessfully(true);
 
-        router.push({
-          pathname: '/swipe',
-          params: {
-            roomCode: params.roomCode,
-            mode: params.mode,
-            location: params.address,
-            cuisines: preferences.join(','),
-            minBudget: minBudgetDollars.toString(),
-            maxBudget: maxBudgetDollars.toString(),
-          },
-        });
+      // For group mode, go to waiting screen
+      // For solo mode, go directly to swipe
+      if (params.mode === 'group') {
+        setTimeout(() => {
+          router.push({
+            pathname: '/preferences-waiting',
+            params: {
+              roomCode: params.roomCode,
+              roomId: params.roomId,
+              mode: params.mode,
+            },
+          });
+        }, 1500);
       } else {
-        Alert.alert('Error', 'Failed to save budget. Please try again.');
+        // Solo mode - go directly to swipe
+        setTimeout(() => {
+          router.push({
+            pathname: '/swipe',
+            params: {
+              roomCode: params.roomCode,
+              roomId: params.roomId,
+              mode: params.mode,
+              location: params.address,
+              cuisines: preferences.join(','),
+              minBudget: minBudget.toString(),
+              maxBudget: maxBudget.toString(),
+            },
+          });
+        }, 1500);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to save budget. Please try again.');
+    } catch (error: any) {
+      console.error('Save preferences error:', error);
+      Alert.alert('Error', error.message || 'Failed to save preferences. Please try again.');
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -122,76 +124,103 @@ export default function BudgetScreen() {
         style={styles.content}
         entering={FadeInDown.delay(100).springify()}
       >
-        <Text style={styles.title}>Budget Range</Text>
+        <Text style={styles.title}>Budget</Text>
         <Text style={styles.description}>
-          Select your comfortable price range
+          Set your budget range in MYR
         </Text>
 
-        <View style={styles.selectedRange}>
-          <Text style={styles.rangeLabel}>Selected Range</Text>
-          <Text style={styles.rangeValue}>
-            {PRICE_RANGES[minBudget - 1].label} to{' '}
-            {PRICE_RANGES[maxBudget - 1].label}
-          </Text>
-        </View>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View
+            style={styles.budgetContainer}
+            entering={FadeInDown.delay(200).springify()}
+          >
+            <View style={styles.budgetRow}>
+              <View style={styles.budgetItem}>
+                <Text style={styles.budgetLabel}>Minimum</Text>
+                <Text style={styles.budgetValue}>RM {minBudget}</Text>
+              </View>
+              <View style={styles.budgetItem}>
+                <Text style={styles.budgetLabel}>Maximum</Text>
+                <Text style={styles.budgetValue}>RM {maxBudget}</Text>
+              </View>
+            </View>
 
-        <View style={styles.priceRanges}>
-          {PRICE_RANGES.map((range, index) => {
-            const isInRange = range.value >= minBudget && range.value <= maxBudget;
-            const isMin = range.value === minBudget;
-            const isMax = range.value === maxBudget;
+            <View style={styles.sliderContainer}>
+              <Text style={styles.sliderLabel}>Minimum Budget</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={5}
+                maximumValue={195}
+                step={5}
+                value={minBudget}
+                onValueChange={(value) => {
+                  // Only update min, don't touch max
+                  // If min would exceed max, cap it at max - 5
+                  const newMin = value >= maxBudget ? maxBudget - 5 : value;
+                  setMinBudget(Math.max(5, newMin));
+                }}
+                minimumTrackTintColor={COLORS.accent}
+                maximumTrackTintColor={COLORS.lightGray}
+                thumbTintColor={COLORS.accent}
+              />
+              <View style={styles.sliderValues}>
+                <Text style={styles.sliderValueText}>RM 5</Text>
+                <Text style={styles.sliderValueText}>RM 195</Text>
+              </View>
+            </View>
 
-            return (
-              <AnimatedPressable
-                key={range.value}
-                style={[
-                  styles.priceButton,
-                  isInRange && styles.priceButtonSelected,
-                  isMin && styles.priceButtonMin,
-                  isMax && styles.priceButtonMax,
-                ]}
-                onPress={() => selectPriceRange(range.value)}
-                entering={FadeInDown.delay(200 + index * 100).springify()}
-              >
-                <View style={styles.priceIconContainer}>
-                  <DollarSign
-                    size={24}
-                    color={isInRange ? COLORS.white : COLORS.accent}
-                    strokeWidth={2.5}
-                  />
-                </View>
-                <Text
-                  style={[
-                    styles.priceLabel,
-                    isInRange && styles.priceLabelSelected,
-                  ]}
-                >
-                  {range.label}
-                </Text>
-                <Text
-                  style={[
-                    styles.priceDescription,
-                    isInRange && styles.priceDescriptionSelected,
-                  ]}
-                >
-                  {range.description}
-                </Text>
-              </AnimatedPressable>
-            );
-          })}
-        </View>
+            <View style={styles.sliderContainer}>
+              <Text style={styles.sliderLabel}>Maximum Budget</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={10}
+                maximumValue={200}
+                step={5}
+                value={maxBudget}
+                onValueChange={(value) => {
+                  // Only update max, don't touch min
+                  // If max would go below min, cap it at min + 5
+                  const newMax = value <= minBudget ? minBudget + 5 : value;
+                  setMaxBudget(Math.min(200, newMax));
+                }}
+                minimumTrackTintColor={COLORS.accent}
+                maximumTrackTintColor={COLORS.lightGray}
+                thumbTintColor={COLORS.accent}
+              />
+              <View style={styles.sliderValues}>
+                <Text style={styles.sliderValueText}>RM 10</Text>
+                <Text style={styles.sliderValueText}>RM 200</Text>
+              </View>
+            </View>
+          </Animated.View>
+
+          <View style={styles.footerSpacer} />
+        </ScrollView>
 
         <Animated.View
           style={styles.footer}
-          entering={FadeInDown.delay(800).springify()}
+          entering={FadeInDown.delay(300).springify()}
         >
+          {savedSuccessfully && (
+            <Text style={styles.successMessage}>
+              ✓ Preferences saved! {params.mode === 'group' ? 'Waiting for others...' : ''}
+            </Text>
+          )}
           <AnimatedPressable
-            style={[styles.continueButton, loading && styles.buttonDisabled]}
+            style={[
+              styles.continueButton,
+              savedSuccessfully && styles.continueButtonSuccess,
+              (isSaving || savedSuccessfully) && styles.buttonDisabled
+            ]}
             onPress={handleContinue}
-            disabled={loading}
+            disabled={isSaving || savedSuccessfully}
           >
             <Text style={styles.continueButtonText}>
-              {loading ? 'Setting up...' : 'Start Swiping'}
+              {savedSuccessfully ? '✓ SAVED!' : (isSaving ? 'SAVING...' : 'SAVE & CONTINUE')}
             </Text>
           </AnimatedPressable>
         </Animated.View>
@@ -226,98 +255,97 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.darkGray,
     opacity: 0.6,
-    marginBottom: 40,
+    marginBottom: 30,
     lineHeight: 24,
   },
-  selectedRange: {
-    backgroundColor: `${COLORS.accent}10`,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  budgetContainer: {
+    backgroundColor: COLORS.lightGray,
     borderRadius: 16,
-    padding: 20,
-    marginBottom: 40,
+    padding: 24,
+    marginBottom: 20,
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+  },
+  budgetItem: {
+    flex: 1,
     alignItems: 'center',
   },
-  rangeLabel: {
+  budgetLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: COLORS.darkGray,
     opacity: 0.6,
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  rangeValue: {
-    fontSize: 24,
+  budgetValue: {
+    fontSize: 28,
     fontWeight: '800',
     color: COLORS.accent,
   },
-  priceRanges: {
-    gap: 16,
+  sliderContainer: {
+    marginBottom: 32,
   },
-  priceButton: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-    borderWidth: 2,
-    borderColor: COLORS.lightGray,
-  },
-  priceButtonSelected: {
-    backgroundColor: COLORS.accent,
-    borderColor: COLORS.accent,
-  },
-  priceButtonMin: {
-    borderTopWidth: 3,
-  },
-  priceButtonMax: {
-    borderBottomWidth: 3,
-  },
-  priceIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: `${COLORS.accent}10`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  priceLabel: {
-    fontSize: 20,
+  sliderLabel: {
+    fontSize: 16,
     fontWeight: '700',
     color: COLORS.darkGray,
-    marginRight: 12,
-    minWidth: 60,
+    marginBottom: 16,
   },
-  priceLabelSelected: {
-    color: COLORS.white,
+  slider: {
+    width: '100%',
+    height: 40,
   },
-  priceDescription: {
-    fontSize: 15,
+  sliderValues: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  sliderValueText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: COLORS.darkGray,
-    opacity: 0.6,
+    opacity: 0.5,
   },
-  priceDescriptionSelected: {
-    color: COLORS.white,
-    opacity: 0.9,
+  footerSpacer: {
+    height: 120,
   },
   footer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 0,
     left: 0,
     right: 0,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.lightGray,
+  },
+  successMessage: {
+    textAlign: 'center',
+    color: '#4CAF50',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   continueButton: {
     backgroundColor: COLORS.accent,
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  continueButtonSuccess: {
+    backgroundColor: '#4CAF50',
   },
   buttonDisabled: {
     opacity: 0.5,

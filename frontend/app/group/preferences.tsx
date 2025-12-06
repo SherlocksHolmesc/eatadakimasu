@@ -44,6 +44,7 @@ export default function PreferencesScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     roomCode?: string;
+    roomId?: string;
     mode: string;
     address: string;
   }>();
@@ -74,6 +75,7 @@ export default function PreferencesScreen() {
         pathname: '/group/budget',
         params: {
           roomCode: params.roomCode,
+          roomId: params.roomId,
           mode: params.mode,
           address: params.address,
           preferences: JSON.stringify(selectedCuisines),

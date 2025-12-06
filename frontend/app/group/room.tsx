@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,9 +12,9 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Plus, LogIn } from 'lucide-react-native';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
   white: '#FFFFFF',
@@ -30,6 +30,19 @@ export default function RoomScreen() {
   const [mode, setMode] = useState<'select' | 'create' | 'join'>('select');
   const [roomCode, setRoomCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const createRoomMutation = useMutation(api.rooms.createRoom);
+  const joinRoomMutation = useMutation(api.rooms.joinRoom);
+
+  useEffect(() => {
+    // Get logged-in user ID
+    const getUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setUserId(id);
+    };
+    getUserId();
+  }, []);
 
   const handleBack = () => {
     if (mode === 'select') {
@@ -41,30 +54,35 @@ export default function RoomScreen() {
   };
 
   const handleCreateRoom = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'Please log in first');
+      router.push('/auth/login');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/rooms/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'group' }),
+      const result = await createRoomMutation({
+        userId: userId as any,
+        mode: 'group',
       });
 
-      const data = await response.json() as { room_code?: string };
-
-      if (data.room_code) {
-        if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-
-        router.push({
-          pathname: '/group/location',
-          params: { roomCode: data.room_code, mode: 'group' },
-        });
-      } else {
-        Alert.alert('Error', 'Failed to create room. Please try again.');
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create room. Please try again.');
+
+      // Navigate to waiting room where the room code will be displayed
+      router.push({
+        pathname: '/room-waiting',
+        params: { 
+          roomCode: result.roomCode,
+          roomId: result.roomId,
+          mode: 'group' 
+        },
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to create room. Please try again.');
+      console.error('Create room error:', error);
     } finally {
       setLoading(false);
     }
@@ -76,30 +94,35 @@ export default function RoomScreen() {
       return;
     }
 
+    if (!userId) {
+      Alert.alert('Error', 'Please log in first');
+      router.push('/auth/login');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/rooms/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room_code: roomCode.toUpperCase() }),
+      const result = await joinRoomMutation({
+        userId: userId as any,
+        roomCode: roomCode.toUpperCase(),
       });
 
-      if (response.ok) {
-        const data = await response.json() as { room_code?: string };
-        
-        if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
-
-        router.push({
-          pathname: '/group/location',
-          params: { roomCode: data.room_code || '', mode: 'group' },
-        });
-      } else {
-        Alert.alert('Room Not Found', 'No active room found with this code.');
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to join room. Please try again.');
+
+      // Navigate to waiting room
+      router.push({
+        pathname: '/room-waiting',
+        params: { 
+          roomCode: result.roomCode,
+          roomId: result.roomId,
+          mode: 'group' 
+        },
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to join room. Please try again.');
+      console.error('Join room error:', error);
     } finally {
       setLoading(false);
     }

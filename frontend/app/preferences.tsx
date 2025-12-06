@@ -8,12 +8,24 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Slider from '@react-native-community/slider';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ArrowLeft } from 'lucide-react-native';
+
+const COLORS = {
+  white: '#FFFFFF',
+  accent: '#ff2346',
+  lightGray: '#f5f5f5',
+  darkGray: '#333333',
+};
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 const CUISINES = [
   { id: 'japanese', label: 'Japanese', icon: '🍣' },
@@ -144,201 +156,229 @@ export default function PreferencesScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      {/* Header */}
-      <TouchableOpacity 
+    <View style={styles.container}>
+      <Pressable 
         style={styles.backButton}
         onPress={() => router.back()}
       >
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
+        <ArrowLeft size={24} color={COLORS.darkGray} />
+      </Pressable>
 
-      <View style={styles.headerContainer}>
-        <Text style={styles.pacmanEmoji}>🔴</Text>
-        <Text style={styles.logo}>Eatadakimasu</Text>
-      </View>
-
-      {mode === 'group' && roomCode && (
-        <View style={styles.roomCodeContainer}>
-          <Text style={styles.roomCodeLabel}>Room Code:</Text>
-          <Text style={styles.roomCode}>{roomCode}</Text>
-        </View>
-      )}
-
-      <Text style={styles.title}>WHERE & WHAT?</Text>
-
-      {/* Location */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>LOCATION</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Enter your location"
-          value={location}
-          onChangeText={setLocation}
-        />
-      </View>
-
-      {/* Food Preferences */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>FOOD PREFERENCES</Text>
-        <View style={styles.cuisineGrid}>
-          {CUISINES.map((cuisine) => (
-            <TouchableOpacity
-              key={cuisine.id}
-              style={[
-                styles.cuisineButton,
-                selectedCuisines.includes(cuisine.id) && styles.cuisineButtonSelected,
-              ]}
-              onPress={() => toggleCuisine(cuisine.id)}
-            >
-              <Text style={styles.cuisineIcon}>{cuisine.icon}</Text>
-              <Text
-                style={[
-                  styles.cuisineLabel,
-                  selectedCuisines.includes(cuisine.id) && styles.cuisineLabelSelected,
-                ]}
-              >
-                {cuisine.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Budget */}
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>BUDGET</Text>
-        <View style={styles.budgetContainer}>
-          <View style={styles.budgetRow}>
-            <Text style={styles.budgetText}>Min: ${minBudget}</Text>
-            <Text style={styles.budgetText}>Max: ${maxBudget}</Text>
-          </View>
-          <View style={styles.sliderContainer}>
-            <Text style={styles.sliderLabel}>Min</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={5}
-              maximumValue={maxBudget - 5}
-              step={5}
-              value={minBudget}
-              onValueChange={setMinBudget}
-              minimumTrackTintColor="#ff2346"
-              maximumTrackTintColor="#ddd"
-              thumbTintColor="#ff2346"
-            />
-          </View>
-          <View style={styles.sliderContainer}>
-            <Text style={styles.sliderLabel}>Max</Text>
-            <Slider
-              style={styles.slider}
-              minimumValue={minBudget + 5}
-              maximumValue={100}
-              step={5}
-              value={maxBudget}
-              onValueChange={setMaxBudget}
-              minimumTrackTintColor="#ff2346"
-              maximumTrackTintColor="#ddd"
-              thumbTintColor="#ff2346"
-            />
-          </View>
-        </View>
-      </View>
-
-      {/* Next Button */}
-      <TouchableOpacity
-        style={[
-          styles.nextButton,
-          savedSuccessfully && styles.nextButtonSuccess
-        ]}
-        onPress={handleNext}
-        disabled={isSaving || savedSuccessfully}
+      <Animated.View
+        style={styles.header}
+        entering={FadeInDown.delay(100).springify()}
       >
-        <Text style={styles.nextButtonText}>
-          {savedSuccessfully ? '✓ ALL DONE!' : (isSaving ? 'SAVING...' : 'SAVE & CONTINUE')}
+        <Text style={styles.title}>Preferences</Text>
+        <Text style={styles.description}>
+          Set your location, food preferences, and budget
         </Text>
-      </TouchableOpacity>
-      
-      {savedSuccessfully && (
-        <Text style={styles.successMessage}>
-          Your preferences have been saved! 🎉
-        </Text>
-      )}
-    </ScrollView>
+        {mode === 'group' && roomCode && (
+          <View style={styles.roomCodeContainer}>
+            <Text style={styles.roomCodeLabel}>Room Code: </Text>
+            <Text style={styles.roomCode}>{roomCode}</Text>
+          </View>
+        )}
+      </Animated.View>
+
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+
+        {/* Location */}
+        <Animated.View 
+          style={styles.section}
+          entering={FadeInDown.delay(200).springify()}
+        >
+          <Text style={styles.sectionLabel}>Location</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your location"
+            placeholderTextColor={`${COLORS.darkGray}60`}
+            value={location}
+            onChangeText={setLocation}
+          />
+        </Animated.View>
+
+        {/* Food Preferences */}
+        <Animated.View 
+          style={styles.section}
+          entering={FadeInDown.delay(300).springify()}
+        >
+          <Text style={styles.sectionLabel}>Food Preferences</Text>
+          <View style={styles.cuisineGrid}>
+            {CUISINES.map((cuisine, index) => (
+              <AnimatedPressable
+                key={cuisine.id}
+                style={[
+                  styles.cuisineButton,
+                  selectedCuisines.includes(cuisine.id) && styles.cuisineButtonSelected,
+                ]}
+                onPress={() => toggleCuisine(cuisine.id)}
+                entering={FadeInDown.delay(400 + index * 50).springify()}
+              >
+                <Text style={styles.cuisineIcon}>{cuisine.icon}</Text>
+                <Text
+                  style={[
+                    styles.cuisineLabel,
+                    selectedCuisines.includes(cuisine.id) && styles.cuisineLabelSelected,
+                  ]}
+                >
+                  {cuisine.label}
+                </Text>
+              </AnimatedPressable>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* Budget */}
+        <Animated.View 
+          style={styles.section}
+          entering={FadeInDown.delay(700).springify()}
+        >
+          <Text style={styles.sectionLabel}>Budget</Text>
+          <View style={styles.budgetContainer}>
+            <View style={styles.budgetRow}>
+              <Text style={styles.budgetText}>Min: ${minBudget}</Text>
+              <Text style={styles.budgetText}>Max: ${maxBudget}</Text>
+            </View>
+            <View style={styles.sliderContainer}>
+              <Text style={styles.sliderLabel}>Min</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={5}
+                maximumValue={maxBudget - 5}
+                step={5}
+                value={minBudget}
+                onValueChange={setMinBudget}
+                minimumTrackTintColor={COLORS.accent}
+                maximumTrackTintColor={COLORS.lightGray}
+                thumbTintColor={COLORS.accent}
+              />
+            </View>
+            <View style={styles.sliderContainer}>
+              <Text style={styles.sliderLabel}>Max</Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={minBudget + 5}
+                maximumValue={100}
+                step={5}
+                value={maxBudget}
+                onValueChange={setMaxBudget}
+                minimumTrackTintColor={COLORS.accent}
+                maximumTrackTintColor={COLORS.lightGray}
+                thumbTintColor={COLORS.accent}
+              />
+            </View>
+          </View>
+        </Animated.View>
+
+        <View style={styles.footerSpacer} />
+      </ScrollView>
+
+      {/* Footer with Button */}
+      <Animated.View
+        style={styles.footer}
+        entering={FadeInDown.delay(800).springify()}
+      >
+        {savedSuccessfully && (
+          <Text style={styles.successMessage}>
+            ✓ Preferences saved! {mode === 'group' ? 'Waiting for others...' : ''}
+          </Text>
+        )}
+        <AnimatedPressable
+          style={[
+            styles.nextButton,
+            savedSuccessfully && styles.nextButtonSuccess,
+            (isSaving || savedSuccessfully) && styles.buttonDisabled
+          ]}
+          onPress={handleNext}
+          disabled={isSaving || savedSuccessfully}
+        >
+          <Text style={styles.nextButtonText}>
+            {savedSuccessfully ? '✓ SAVED!' : (isSaving ? 'SAVING...' : 'SAVE & CONTINUE')}
+          </Text>
+        </AnimatedPressable>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  contentContainer: {
-    padding: 24,
+    backgroundColor: COLORS.white,
+    paddingTop: 60,
+    paddingHorizontal: 24,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    marginTop: 40,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
     marginBottom: 20,
   },
-  backButtonText: {
-    fontSize: 28,
-    color: '#ff2346',
+  header: {
+    marginBottom: 30,
   },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: COLORS.darkGray,
+    marginBottom: 12,
   },
-  pacmanEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  logo: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ff2346',
+  description: {
+    fontSize: 16,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    lineHeight: 24,
+    marginBottom: 16,
   },
   roomCodeContainer: {
-    backgroundColor: '#fff0f3',
-    padding: 12,
-    borderRadius: 8,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: `${COLORS.accent}10`,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    marginTop: 8,
   },
   roomCodeLabel: {
     fontSize: 14,
-    color: '#666',
-    marginRight: 8,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    fontWeight: '600',
   },
   roomCode: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ff2346',
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.accent,
+    letterSpacing: 2,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 24,
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
   section: {
     marginBottom: 32,
   },
   sectionLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+    marginBottom: 16,
   },
   input: {
-    height: 48,
+    height: 56,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderColor: COLORS.lightGray,
+    borderRadius: 16,
+    paddingHorizontal: 20,
     fontSize: 16,
+    backgroundColor: COLORS.white,
+    color: COLORS.darkGray,
   },
   cuisineGrid: {
     flexDirection: 'row',
@@ -348,75 +388,95 @@ const styles = StyleSheet.create({
   cuisineButton: {
     width: '30%',
     aspectRatio: 1,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   cuisineButtonSelected: {
-    backgroundColor: '#fff0f3',
-    borderColor: '#ff2346',
+    backgroundColor: `${COLORS.accent}10`,
+    borderColor: COLORS.accent,
   },
   cuisineIcon: {
-    fontSize: 32,
-    marginBottom: 4,
+    fontSize: 36,
+    marginBottom: 8,
   },
   cuisineLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    opacity: 0.7,
   },
   cuisineLabelSelected: {
-    color: '#ff2346',
-    fontWeight: 'bold',
+    color: COLORS.accent,
+    opacity: 1,
+    fontWeight: '700',
   },
   budgetContainer: {
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: COLORS.lightGray,
+    padding: 20,
+    borderRadius: 16,
   },
   budgetRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   budgetText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '700',
+    color: COLORS.darkGray,
   },
   sliderContainer: {
-    marginBottom: 12,
+    marginBottom: 16,
   },
   sliderLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    marginBottom: 8,
   },
   slider: {
     width: '100%',
     height: 40,
   },
-  nextButton: {
-    backgroundColor: '#ff2346',
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
+  footerSpacer: {
+    height: 120,
   },
-  nextButtonSuccess: {
-    backgroundColor: '#4CAF50',
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.lightGray,
   },
   successMessage: {
     textAlign: 'center',
     color: '#4CAF50',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: -20,
-    marginBottom: 20,
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  nextButton: {
+    backgroundColor: COLORS.accent,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nextButtonSuccess: {
+    backgroundColor: '#4CAF50',
+  },
+  buttonDisabled: {
+    opacity: 0.5,
   },
   memberProgress: {
     backgroundColor: '#f8f8f8',

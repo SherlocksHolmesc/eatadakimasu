@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share, Platform, Pressable } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { ArrowLeft } from 'lucide-react-native';
+
+const COLORS = {
+  white: '#FFFFFF',
+  accent: '#ff2346',
+  lightGray: '#f5f5f5',
+  darkGray: '#333333',
+};
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function RoomWaitingScreen() {
   const router = useRouter();
@@ -62,10 +73,14 @@ export default function RoomWaitingScreen() {
     if (roomData.sessionStarted && roomData.currentScreen === 'preferences') {
       console.log('🚀 CONDITIONS MET! NAVIGATING TO PREFERENCES!');
       setHasNavigated(true); // Prevent multiple navigations
-      router.push({
-        pathname: '/preferences',
-        params: { roomCode, roomId, mode: 'group' }
-      });
+      // Only navigate if user hasn't already set preferences
+      const currentMember = roomData.members.find((m: any) => m.userId === currentUserId);
+      if (!currentMember?.preferences) {
+        router.push({
+          pathname: '/group/location',
+          params: { roomCode, roomId, mode: 'group' }
+        });
+      }
     } else {
       console.log('❌ Conditions not met for navigation');
     }
@@ -128,10 +143,10 @@ export default function RoomWaitingScreen() {
       });
       console.log('Session started successfully!');
       
-      // Navigate immediately for the host
-      console.log('Navigating host to preferences...');
+      // Navigate immediately for the host to location screen (first step)
+      console.log('Navigating host to location...');
       router.push({
-        pathname: '/preferences',
+        pathname: '/group/location',
         params: { roomCode, roomId, mode: 'group' }
       });
     } catch (error: any) {
@@ -192,87 +207,114 @@ export default function RoomWaitingScreen() {
   return (
     <View style={styles.container}>
       {/* Back button */}
-      <TouchableOpacity 
+      <Pressable 
         style={styles.backButton}
         onPress={handleLeave}
       >
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
+        <ArrowLeft size={24} color={COLORS.darkGray} />
+      </Pressable>
 
-      {/* Logo */}
-      <Text style={styles.logo}>Eatadakimasu</Text>
-
-      {/* Room Code Display */}
-      <View style={styles.roomCodeContainer}>
-        <Text style={styles.roomCodeLabel}>ROOM CODE</Text>
-        <Text style={styles.roomCode}>{roomCode}</Text>
-        <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-          <Text style={styles.shareButtonText}>📤 SHARE CODE</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Members List */}
-      <View style={styles.membersContainer}>
-        <Text style={styles.membersTitle}>
-          Members ({roomData.members.length})
-        </Text>
-        
-        <ScrollView style={styles.membersList}>
-          {roomData.members.map((member, index) => (
-            <View key={index} style={styles.memberItem}>
-              <View style={styles.memberInfo}>
-                <Text style={styles.memberName}>
-                  {member.username}
-                  {member.userId === roomData.hostUserId && ' 👑'}
-                </Text>
-              </View>
-              <View style={[
-                styles.readyIndicator,
-                member.isReady && styles.readyIndicatorActive
-              ]}>
-                <Text style={styles.readyText}>
-                  {member.isReady ? '✓ Ready' : 'Waiting...'}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Ready Button */}
-      <TouchableOpacity 
-        style={[
-          styles.readyButton,
-          currentMember?.isReady && styles.readyButtonActive
-        ]}
-        onPress={handleReady}
+      <Animated.View
+        style={styles.content}
+        entering={FadeInDown.delay(100).springify()}
       >
-        <Text style={styles.readyButtonText}>
-          {currentMember?.isReady ? "I'M READY ✓" : "READY UP"}
+        {/* Title */}
+        <Text style={styles.title}>Group Room</Text>
+        <Text style={styles.description}>
+          Share the room code with your friends to join
         </Text>
-      </TouchableOpacity>
 
-      {/* Start Button (Host Only) */}
-      {isHost && (
-        <TouchableOpacity 
-          style={[
-            styles.startButton,
-            !allReady && styles.startButtonDisabled
-          ]}
-          onPress={handleStart}
-          disabled={!allReady}
+        {/* Room Code Display */}
+        <Animated.View 
+          style={styles.roomCodeContainer}
+          entering={FadeInDown.delay(200).springify()}
         >
-          <Text style={styles.startButtonText}>
-            {allReady ? 'START SWIPING' : 'WAITING FOR EVERYONE...'}
-          </Text>
-        </TouchableOpacity>
-      )}
+          <Text style={styles.roomCodeLabel}>ROOM CODE</Text>
+          <Text style={styles.roomCode}>{roomCode}</Text>
+          <AnimatedPressable 
+            style={styles.shareButton} 
+            onPress={handleShare}
+            entering={FadeInDown.delay(300).springify()}
+          >
+            <Text style={styles.shareButtonText}>📤 Share Code</Text>
+          </AnimatedPressable>
+        </Animated.View>
 
-      {!isHost && allReady && (
-        <View style={styles.waitingForHost}>
-          <Text style={styles.waitingText}>Waiting for host to start...</Text>
+        {/* Members List */}
+        <View style={styles.membersContainer}>
+          <Text style={styles.membersTitle}>
+            Members ({roomData.members.length})
+          </Text>
+          
+          <ScrollView style={styles.membersList} showsVerticalScrollIndicator={false}>
+            {roomData.members.map((member, index) => (
+              <Animated.View 
+                key={index} 
+                style={styles.memberItem}
+                entering={FadeInDown.delay(400 + index * 50).springify()}
+              >
+                <View style={styles.memberInfo}>
+                  <Text style={styles.memberName}>
+                    {member.username}
+                    {member.userId === roomData.hostUserId && ' 👑'}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.readyIndicator,
+                  member.isReady && styles.readyIndicatorActive
+                ]}>
+                  <Text style={[
+                    styles.readyText,
+                    member.isReady && styles.readyTextActive
+                  ]}>
+                    {member.isReady ? '✓ Ready' : 'Waiting...'}
+                  </Text>
+                </View>
+              </Animated.View>
+            ))}
+          </ScrollView>
         </View>
-      )}
+
+        {/* Ready Button */}
+        <AnimatedPressable 
+          style={[
+            styles.readyButton,
+            currentMember?.isReady && styles.readyButtonActive
+          ]}
+          onPress={handleReady}
+          entering={FadeInDown.delay(500).springify()}
+        >
+          <Text style={styles.readyButtonText}>
+            {currentMember?.isReady ? "I'M READY ✓" : "READY UP"}
+          </Text>
+        </AnimatedPressable>
+
+        {/* Start Button (Host Only) */}
+        {isHost && (
+          <AnimatedPressable 
+            style={[
+              styles.startButton,
+              !allReady && styles.startButtonDisabled
+            ]}
+            onPress={handleStart}
+            disabled={!allReady}
+            entering={FadeInDown.delay(600).springify()}
+          >
+            <Text style={styles.startButtonText}>
+              {allReady ? 'SET PREFERENCES' : 'WAITING FOR EVERYONE...'}
+            </Text>
+          </AnimatedPressable>
+        )}
+
+        {!isHost && allReady && (
+          <Animated.View 
+            style={styles.waitingForHost}
+            entering={FadeInDown.delay(600).springify()}
+          >
+            <Text style={styles.waitingText}>Waiting for host to start...</Text>
+          </Animated.View>
+        )}
+      </Animated.View>
     </View>
   );
 }
@@ -280,74 +322,93 @@ export default function RoomWaitingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    padding: 24,
+    backgroundColor: COLORS.white,
+    paddingTop: 60,
+    paddingHorizontal: 24,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    marginTop: 40,
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
     marginBottom: 20,
   },
-  backButtonText: {
-    fontSize: 28,
-    color: '#ff2346',
+  content: {
+    flex: 1,
   },
-  logo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff2346',
-    textAlign: 'center',
-    marginBottom: 30,
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: COLORS.darkGray,
+    marginBottom: 12,
+  },
+  description: {
+    fontSize: 16,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    marginBottom: 40,
+    lineHeight: 24,
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: COLORS.darkGray,
+    opacity: 0.6,
     textAlign: 'center',
     marginTop: 100,
   },
   roomCodeContainer: {
-    backgroundColor: '#f8f8f8',
-    borderRadius: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 20,
     padding: 24,
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 2,
-    borderColor: '#ff2346',
+    borderColor: COLORS.accent,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   roomCodeLabel: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: 'bold',
-    marginBottom: 8,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    fontWeight: '600',
+    marginBottom: 12,
+    letterSpacing: 1,
   },
   roomCode: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#ff2346',
-    letterSpacing: 4,
-    marginBottom: 16,
+    fontSize: 42,
+    fontWeight: '800',
+    color: COLORS.accent,
+    letterSpacing: 6,
+    marginBottom: 20,
   },
   shareButton: {
-    backgroundColor: '#ff2346',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 20,
+    minWidth: 140,
+    alignItems: 'center',
   },
   shareButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   membersContainer: {
     flex: 1,
     marginBottom: 20,
   },
   membersTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+    marginBottom: 16,
   },
   membersList: {
     flex: 1,
@@ -357,9 +418,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
-    marginBottom: 8,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.lightGray,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
   memberInfo: {
     flex: 1,
@@ -367,24 +438,27 @@ const styles = StyleSheet.create({
   memberName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: COLORS.darkGray,
   },
   readyIndicator: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#e0e0e0',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: COLORS.lightGray,
   },
   readyIndicatorActive: {
     backgroundColor: '#4CAF50',
   },
   readyText: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  readyTextActive: {
+    color: COLORS.white,
   },
   readyButton: {
-    backgroundColor: '#ff2346',
+    backgroundColor: COLORS.accent,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
@@ -395,34 +469,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   readyButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   startButton: {
-    backgroundColor: '#ff2346',
+    backgroundColor: COLORS.accent,
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
   startButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: COLORS.lightGray,
+    opacity: 0.5,
   },
   startButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   waitingForHost: {
     padding: 16,
-    backgroundColor: '#f8f8f8',
-    borderRadius: 12,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 16,
     alignItems: 'center',
   },
   waitingText: {
     fontSize: 14,
-    color: '#666',
+    color: COLORS.darkGray,
+    opacity: 0.6,
     fontStyle: 'italic',
   },
 });

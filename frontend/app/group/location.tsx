@@ -27,6 +27,7 @@ export default function LocationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     roomCode?: string;
+    roomId?: string;
     mode: string;
   }>();
   const [address, setAddress] = useState('');
@@ -80,6 +81,7 @@ export default function LocationScreen() {
         pathname: '/group/preferences',
         params: {
           roomCode: params.roomCode,
+          roomId: params.roomId,
           mode: params.mode,
           address,
         },
