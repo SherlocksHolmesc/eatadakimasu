@@ -25,9 +25,9 @@ export default function SplashScreen() {
       useNativeDriver: true,
     }).start();
 
-    // Navigate to landing after 3 seconds
+    // Navigate to login/register after 3 seconds
     const timer = setTimeout(() => {
-      router.replace('/landing');
+      router.replace('/auth/login');
     }, 3000);
 
     return () => clearTimeout(timer);

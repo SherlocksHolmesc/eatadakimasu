@@ -77,8 +77,14 @@ agenthub/agents/youtube/db
 .cache/
 frontend/.metro-cache/
 
+# Convex
+.env.local
+convex/_generated/
+
 # Mobile development
 android-sdk/ -e 
 # Environment files
 *.env
 *.env.*
+
+.env.local
