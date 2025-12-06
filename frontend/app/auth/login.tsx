@@ -42,13 +42,23 @@ export default function LoginScreen() {
     }
   }, [googleClientId, redirectUri]);
 
+  // Generate nonce for ID token flow (required by Google)
+  const nonce = React.useMemo(() => {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }, []);
+
   // Google OAuth configuration
+  // Use implicit flow (ID token) - requires nonce, no PKCE
   const [request, response, promptAsync] = AuthSession.useAuthRequest(
     {
       clientId: googleClientId,
       scopes: ['openid', 'profile', 'email'],
       responseType: AuthSession.ResponseType.IdToken,
       redirectUri: redirectUri,
+      usePKCE: false, // Explicitly disable PKCE for implicit flow
+      extraParams: {
+        nonce: nonce, // Required for ID token flow
+      },
     },
     {
       authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
