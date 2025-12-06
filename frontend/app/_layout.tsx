@@ -18,6 +18,8 @@ export default function RootLayout() {
         <Stack.Screen name="auth/login" />
         <Stack.Screen name="auth/register" />
         <Stack.Screen name="landing" />
+        <Stack.Screen name="friends" />
+        <Stack.Screen name="profile" />
         <Stack.Screen name="solo-setup" />
         <Stack.Screen name="group-mode" />
         <Stack.Screen name="room-waiting" />
