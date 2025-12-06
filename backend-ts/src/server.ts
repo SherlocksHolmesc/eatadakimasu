@@ -314,8 +314,13 @@ app.post('/api/ai-recommend', async (req: Request, res: Response) => {
   }
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`\n🚀 Backend server running on http://localhost:${PORT}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/api/health\n`);
-});
+// Export for Vercel serverless
+export default app;
+
+// Start server only in development (not on Vercel)
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Backend server running on http://localhost:${PORT}`);
+    console.log(`📍 Health check: http://localhost:${PORT}/api/health\n`);
+  });
+}
