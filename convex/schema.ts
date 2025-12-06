@@ -61,6 +61,22 @@ export default defineSchema({
     restaurantId: v.string(),
     vote: v.string(), // "like" or "dislike"
     votedAt: v.number(),
+    // Store restaurant data for results display
+    restaurantData: v.optional(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        photo: v.optional(v.string()),
+        cuisine: v.string(),
+        rating: v.optional(v.number()),
+        price_range: v.optional(v.string()),
+        address: v.optional(v.string()),
+        location: v.optional(v.object({
+          lat: v.number(),
+          lng: v.number(),
+        })),
+      })
+    ),
   })
     .index("by_room", ["roomId"])
     .index("by_room_and_restaurant", ["roomId", "restaurantId"]),

@@ -28,6 +28,17 @@ function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
 
+// In-memory storage for votes (for hackathon purposes)
+interface Vote {
+  room_code: string;
+  user_id: string;
+  restaurant_id: string;
+  vote: string;
+  restaurant_data?: any;
+}
+
+const votesDB: Vote[] = [];
+
 // Routes
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'healthy', service: 'eatadakimasu-backend-ts' });
@@ -55,7 +66,24 @@ app.post('/api/preferences', (req: Request, res: Response) => {
 });
 
 app.post('/api/votes', (req: Request, res: Response) => {
-  res.json({ success: true, message: 'Vote recorded in Convex' });
+  try {
+    const { room_code, user_id, restaurant_id, vote, restaurant_data } = req.body;
+    
+    // Store vote in memory
+    votesDB.push({
+      room_code,
+      user_id,
+      restaurant_id,
+      vote,
+      restaurant_data
+    });
+    
+    console.log(`✅ Vote recorded: ${user_id} voted ${vote} for ${restaurant_id} in room ${room_code}`);
+    res.json({ success: true, message: 'Vote recorded' });
+  } catch (error) {
+    console.error('Error recording vote:', error);
+    res.status(500).json({ error: 'Failed to record vote' });
+  }
 });
 
 app.post('/api/restaurants', async (req: Request, res: Response) => {
@@ -186,17 +214,53 @@ app.post('/api/restaurants/group-recommend', async (req: Request, res: Response)
   }
 });
 
-app.get('/api/results/:room_code', (req: Request, res: Response) => {
-  const results = [{
-    id: 'rest_1',
-    name: 'Fallback Restaurant',
-    cuisine: 'International',
-    rating: 4.5,
-    price_range: '$$',
-    vote_count: 3,
-    votes_percentage: 100,
-  }];
-  res.json({ results });
+app.get('/api/results/:room_code', async (req: Request, res: Response) => {
+  try {
+    const { room_code } = req.params;
+    
+    // Get all votes for this room
+    const votes = votesDB.filter(v => v.room_code === room_code);
+    
+    if (votes.length === 0) {
+      return res.json({ results: [] });
+    }
+
+    // Count votes per restaurant (only count 'yes' or 'like' votes)
+    const votesByRestaurant = new Map<string, { count: number; restaurant: any }>();
+    
+    for (const vote of votes) {
+      if (vote.vote === 'yes' || vote.vote === 'like') {
+        const current = votesByRestaurant.get(vote.restaurant_id) || { count: 0, restaurant: vote.restaurant_data };
+        votesByRestaurant.set(vote.restaurant_id, {
+          count: current.count + 1,
+          restaurant: vote.restaurant_data || current.restaurant
+        });
+      }
+    }
+
+    // Convert to array and add vote counts
+    const results = Array.from(votesByRestaurant.values())
+      .map(({ count, restaurant }) => ({
+        ...restaurant,
+        vote_count: count,
+        votes: count,
+        votes_percentage: Math.round((count / votes.length) * 100)
+      }))
+      .sort((a, b) => {
+        // Sort by votes first
+        if (b.vote_count !== a.vote_count) {
+          return b.vote_count - a.vote_count;
+        }
+        // If votes are equal, sort by rating
+        return (b.rating || 0) - (a.rating || 0);
+      });
+
+    console.log(`📊 Results for room ${room_code}:`, results.length, 'restaurants with votes');
+    res.json({ results });
+  } catch (error) {
+    console.error('Error getting results:', error);
+    res.status(500).json({ error: 'Failed to get results' });
+  }
 });
 
 app.post('/api/ai-recommend', async (req: Request, res: Response) => {

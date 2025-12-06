@@ -134,7 +134,7 @@ export default function SwipeScreen() {
     const restaurant = restaurants[currentIndex];
 
     try {
-      // Save vote to backend API (for both solo and group)
+      // Save vote to backend API with full restaurant data
       await fetch(`${API_URL}/api/votes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,20 +143,17 @@ export default function SwipeScreen() {
           user_id: userId,
           restaurant_id: restaurant.id,
           vote: vote ? 'yes' : 'no',
+          restaurant_data: {
+            id: restaurant.id,
+            name: restaurant.name,
+            photo: restaurant.photo,
+            cuisine: restaurant.cuisine,
+            rating: restaurant.rating,
+            price_range: restaurant.price_range,
+            address: restaurant.address,
+          }
         }),
       });
-
-      // TODO: Also submit to Convex for real-time sync if room code exists
-      // This would require setting up Convex client in the app
-      // Example:
-      // if (params.roomCode) {
-      //   await convex.mutation(api.votes.submitVote, {
-      //     roomId: convexRoomId,
-      //     userId: convexUserId,
-      //     restaurantId: restaurant.id,
-      //     vote: vote ? 'like' : 'dislike',
-      //   });
-      // }
 
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(
