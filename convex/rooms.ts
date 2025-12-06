@@ -330,6 +330,7 @@ export const updateMemberPreferences = mutation({
       cuisines: v.optional(v.array(v.string())),
       distance: v.optional(v.number()),
       priceRange: v.optional(v.string()),
+      location: v.optional(v.string()),
     }),
   },
   handler: async (ctx, args) => {

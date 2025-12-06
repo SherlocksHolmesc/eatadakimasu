@@ -87,19 +87,39 @@ export default function SwipeScreen() {
   const loadRestaurants = async () => {
     try {
       const cuisineList = typeof params.cuisines === 'string' ? params.cuisines.split(',') : [params.cuisines];
-      const response = await fetch(`${API_URL}/api/restaurants`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cuisines: cuisineList,
-          min_budget: parseInt(params.minBudget),
-          max_budget: parseInt(params.maxBudget),
-          location: params.location,
-        }),
-      });
+      
+      // If in group mode, use AI-powered group recommendations
+      if (params.mode === 'group' && params.roomCode) {
+        const response = await fetch(`${API_URL}/api/restaurants/group-recommend`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            room_code: params.roomCode,
+            location: params.location || 'Kuala Lumpur, Malaysia',
+            cuisines: cuisineList,
+            min_budget: parseInt(params.minBudget) || 10,
+            max_budget: parseInt(params.maxBudget) || 50,
+          }),
+        });
+        
+        const data = await response.json() as { restaurants?: Restaurant[] };
+        setRestaurants(data.restaurants || []);
+      } else {
+        // Solo mode or fallback - use regular restaurant search
+        const response = await fetch(`${API_URL}/api/restaurants`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cuisines: cuisineList,
+            min_budget: parseInt(params.minBudget),
+            max_budget: parseInt(params.maxBudget),
+            location: params.location,
+          }),
+        });
 
-      const data = await response.json() as { restaurants?: Restaurant[] };
-      setRestaurants(data.restaurants || []);
+        const data = await response.json() as { restaurants?: Restaurant[] };
+        setRestaurants(data.restaurants || []);
+      }
     } catch (error) {
       console.error('Error loading restaurants:', error);
       Alert.alert('Error', 'Failed to load restaurants');
@@ -125,6 +145,18 @@ export default function SwipeScreen() {
           vote: vote ? 'yes' : 'no',
         }),
       });
+
+      // TODO: Also submit to Convex for real-time sync if room code exists
+      // This would require setting up Convex client in the app
+      // Example:
+      // if (params.roomCode) {
+      //   await convex.mutation(api.votes.submitVote, {
+      //     roomId: convexRoomId,
+      //     userId: convexUserId,
+      //     restaurantId: restaurant.id,
+      //     vote: vote ? 'like' : 'dislike',
+      //   });
+      // }
 
       if (Platform.OS !== 'web') {
         Haptics.impactAsync(
@@ -191,19 +223,12 @@ export default function SwipeScreen() {
       [-20, 0, 20]
     );
 
-    const opacity = interpolate(
-      Math.abs(translateX.value),
-      [0, SWIPE_THRESHOLD],
-      [1, 0.8]
-    );
-
     return {
       transform: [
         { translateX: translateX.value },
         { translateY: translateY.value },
         { rotate: `${rotate}deg` },
       ] as any,
-      opacity,
     };
   });
 
@@ -275,65 +300,53 @@ export default function SwipeScreen() {
       <View style={styles.cardsContainer}>
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.card, cardStyle]}>
-            <Pressable onPress={() => setShowModal(true)} style={styles.cardInner}>
-              <Image
-                source={{ uri: currentRestaurant.photo }}
-                style={styles.cardImage}
-                resizeMode="cover"
-              />
+            <Image
+              source={{ uri: currentRestaurant.photo }}
+              style={styles.cardImage}
+              resizeMode="cover"
+            />
 
-              <Animated.View style={[styles.likeStamp, likeOpacityStyle]}>
-                <Text style={styles.stampText}>LIKE</Text>
-              </Animated.View>
+            <Animated.View style={[styles.likeStamp, likeOpacityStyle]}>
+              <Text style={styles.stampText}>LIKE</Text>
+            </Animated.View>
 
-              <Animated.View style={[styles.nopeStamp, nopeOpacityStyle]}>
-                <Text style={styles.stampText}>NOPE</Text>
-              </Animated.View>
+            <Animated.View style={[styles.nopeStamp, nopeOpacityStyle]}>
+              <Text style={styles.stampText}>NOPE</Text>
+            </Animated.View>
 
-              <View style={styles.cardOverlay}>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.restaurantName} numberOfLines={1}>
-                    {currentRestaurant.name}
-                  </Text>
-                  <View style={styles.infoRow}>
-                    <View style={styles.rating}>
-                      <Star size={16} color="#FFB800" fill="#FFB800" />
-                      <Text style={styles.ratingText}>
-                        {currentRestaurant.rating.toFixed(1)}
-                      </Text>
-                    </View>
-                    <Text style={styles.separator}>•</Text>
-                    <Text style={styles.price}>
-                      {getPriceSymbol(currentRestaurant.price_range)}
-                    </Text>
-                    <Text style={styles.separator}>•</Text>
-                    <Text style={styles.cuisine}>
-                      {currentRestaurant.cuisine}
+            <Pressable onPress={() => setShowModal(true)} style={styles.cardOverlay}>
+              <View style={styles.cardInfo}>
+                <Text style={styles.restaurantName} numberOfLines={1}>
+                  {currentRestaurant.name}
+                </Text>
+                <View style={styles.infoRow}>
+                  <View style={styles.rating}>
+                    <Star size={16} color="#FFB800" fill="#FFB800" />
+                    <Text style={styles.ratingText}>
+                      {currentRestaurant.rating.toFixed(1)}
                     </Text>
                   </View>
-                  <View style={styles.metaRow}>
-                    <View style={styles.metaItem}>
-                      <MapPin size={14} color={COLORS.white} />
-                      <Text style={styles.metaText}>
-                        {currentRestaurant.address.split(',')[0]}
-                      </Text>
-                    </View>
+                  <Text style={styles.separator}>•</Text>
+                  <Text style={styles.price}>
+                    {getPriceSymbol(currentRestaurant.price_range)}
+                  </Text>
+                  <Text style={styles.separator}>•</Text>
+                  <Text style={styles.cuisine}>
+                    {currentRestaurant.cuisine}
+                  </Text>
+                </View>
+                <View style={styles.metaRow}>
+                  <View style={styles.metaItem}>
+                    <MapPin size={14} color={COLORS.white} />
+                    <Text style={styles.metaText}>
+                      {currentRestaurant.address.split(',')[0]}
+                    </Text>
                   </View>
                 </View>
               </View>
             </Pressable>
           </Animated.View>
         </GestureDetector>
-
-        {currentIndex < restaurants.length - 1 && (
-          <View style={[styles.card, styles.nextCard]}>
-            <Image
-              source={{ uri: restaurants[currentIndex + 1].photo }}
-              style={styles.cardImage}
-              resizeMode="cover"
-            />
-          </View>
-        )}
       </View>
 
       <View style={styles.actions}>
@@ -490,41 +503,41 @@ const styles = StyleSheet.create({
   },
   nextCard: {
     transform: [{ scale: 0.95 }],
-    opacity: 0.5,
-  },
-  cardInner: {
-    flex: 1,
   },
   cardImage: {
     width: '100%',
     height: '100%',
+    position: 'absolute',
+    zIndex: 1,
   },
   likeStamp: {
     position: 'absolute',
     top: 40,
     right: 40,
     backgroundColor: COLORS.green,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
     transform: [{ rotate: '20deg' }],
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: COLORS.white,
+    zIndex: 20,
   },
   nopeStamp: {
     position: 'absolute',
     top: 40,
     left: 40,
     backgroundColor: COLORS.accent,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
     transform: [{ rotate: '-20deg' }],
-    borderWidth: 4,
+    borderWidth: 3,
     borderColor: COLORS.white,
+    zIndex: 20,
   },
   stampText: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: COLORS.white,
     letterSpacing: 2,
@@ -534,14 +547,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    minHeight: 140,
     padding: 24,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    zIndex: 15,
+    pointerEvents: 'box-none',
   },
   cardInfo: {
     gap: 8,
   },
   restaurantName: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: COLORS.white,
     marginBottom: 4,

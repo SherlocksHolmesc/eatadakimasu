@@ -76,7 +76,12 @@ export default function ResultsScreen() {
       .filter((r: RestaurantWithVotes) => (r.votes || 0) > 0)
       .sort((a: RestaurantWithVotes, b: RestaurantWithVotes) => (b.votes || 0) - (a.votes || 0));
 
-      setRestaurants(results);
+      // For group mode, show only top 3
+      if (params.mode === 'group') {
+        setRestaurants(results.slice(0, 3));
+      } else {
+        setRestaurants(results);
+      }
     } catch (error) {
       console.error('Error loading results:', error);
       Alert.alert('Error', 'Failed to load results');

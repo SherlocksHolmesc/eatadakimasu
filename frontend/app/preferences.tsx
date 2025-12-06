@@ -142,6 +142,16 @@ export default function PreferencesScreen() {
       return;
     }
 
+    if (!location || location.trim() === '') {
+      const message = 'Please enter your location';
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
+      return;
+    }
+
     // Both solo and group mode need roomId and userId to save to Convex
     console.log('handleNext: Checking requirements...');
     console.log('handleNext: roomId:', roomId, 'type:', typeof roomId);
@@ -214,6 +224,7 @@ export default function PreferencesScreen() {
           cuisines: selectedCuisines,
           distance: 10, // Default distance
           priceRange: `${minBudget}-${maxBudget}`,
+          location: location,
         },
       });
 
