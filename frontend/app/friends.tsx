@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,8 @@ import {
   Pressable,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
-// Using a simple approach - in production, install @react-native-clipboard/clipboard
-// For now, we'll show an alert with the UID
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -18,6 +17,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { UserPlus, Search, Copy, UserCheck, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setStringAsync } from 'expo-clipboard';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -77,20 +80,123 @@ export default function FriendScreen() {
   const router = useRouter();
   const [internalTab, setInternalTab] = useState<'list' | 'requests'>('list');
   const [searchQuery, setSearchQuery] = useState('');
-  const myUid = 'UID-8392-XZ'; // Mock UID
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const handleCopyUid = () => {
-    // In production, use: import Clipboard from '@react-native-clipboard/clipboard';
-    // Clipboard.setString(myUid);
-    Alert.alert('Your UID', myUid, [
-      { text: 'OK' },
-    ]);
+  // Convex queries and mutations
+  const currentUser = useQuery(
+    api.friends.getCurrentUser,
+    userId ? { userId: userId as any } : 'skip'
+  );
+  const friends = useQuery(
+    api.friends.getFriends,
+    userId ? { userId: userId as any } : 'skip'
+  );
+  const friendRequests = useQuery(
+    api.friends.getIncomingFriendRequests,
+    userId ? { userId: userId as any } : 'skip'
+  );
+
+  const sendFriendRequestMutation = useMutation(api.friends.sendFriendRequest);
+  const acceptFriendRequestMutation = useMutation(api.friends.acceptFriendRequest);
+  const rejectFriendRequestMutation = useMutation(api.friends.rejectFriendRequest);
+  
+  // Search user - we'll use a query with state
+  const [searchUid, setSearchUid] = useState<string | null>(null);
+  const searchedUserQuery = useQuery(
+    api.friends.getUserByUid,
+    searchUid ? { uid: searchUid } : 'skip'
+  );
+
+  useEffect(() => {
+    const loadUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setUserId(id);
+    };
+    loadUserId();
+  }, []);
+
+  const handleCopyUid = async () => {
+    const uidToCopy = currentUser?.formattedUid || currentUser?.uid;
+    
+    if (!uidToCopy) {
+      Alert.alert('Error', 'UID not available');
+      return;
+    }
+
+    try {
+      await setStringAsync(uidToCopy);
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      Alert.alert('Success', 'UID copied to clipboard!');
+    } catch (error) {
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+      Alert.alert('Error', 'Failed to copy UID');
+    }
   };
 
-  const handleAddFriend = () => {
-    if (!searchQuery) return;
-    Alert.alert('Success', `Request sent to ${searchQuery}`);
-    setSearchQuery('');
+  const handleSearchUser = () => {
+    if (!searchQuery.trim() || !userId) return;
+    
+    setIsSearching(true);
+    setSearchUid(searchQuery.trim());
+  };
+
+  // Handle search result
+  useEffect(() => {
+    if (searchUid && searchedUserQuery !== undefined) {
+      setIsSearching(false);
+      // UI will show "not found" message automatically
+    }
+  }, [searchedUserQuery, searchUid]);
+
+  const handleAddFriend = async () => {
+    if (!searchedUserQuery || !userId) return;
+    
+    if (searchedUserQuery.userId === userId) {
+      Alert.alert('Error', 'Cannot add yourself as a friend');
+      return;
+    }
+
+    try {
+      await sendFriendRequestMutation({
+        fromUserId: userId as any,
+        toUserId: searchedUserQuery.userId as any,
+      });
+      Alert.alert('Success', `Friend request sent to ${searchedUserQuery.username}`);
+      setSearchQuery('');
+      setSearchUid(null);
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to send friend request');
+    }
+  };
+
+  const handleAcceptRequest = async (requestId: string, fromUserId: string) => {
+    if (!userId) return;
+    
+    try {
+      await acceptFriendRequestMutation({
+        requestId: requestId as any,
+        fromUserId: fromUserId as any,
+        toUserId: userId as any,
+      });
+      Alert.alert('Success', 'Friend request accepted');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to accept request');
+    }
+  };
+
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      await rejectFriendRequestMutation({
+        requestId: requestId as any,
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to reject request');
+    }
   };
 
   const handleTabChange = (tab: 'home' | 'friends' | 'profile') => {
@@ -142,9 +248,11 @@ export default function FriendScreen() {
               <Text style={[styles.tabText, internalTab === 'requests' && styles.tabTextActive]}>
                 Requests
               </Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
+              {friendRequests && friendRequests.length > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{friendRequests.length}</Text>
+                </View>
+              )}
             </Pressable>
           </View>
         </View>
@@ -161,40 +269,111 @@ export default function FriendScreen() {
                   <Input
                     placeholder="Enter friend's UID"
                     value={searchQuery}
-                    onChangeText={setSearchQuery}
+                    onChangeText={(text) => {
+                      setSearchQuery(text);
+                      setSearchUid(null);
+                    }}
+                    onSubmitEditing={handleSearchUser}
                     style={styles.searchInput}
                   />
                 </View>
-                <Pressable style={styles.addButton} onPress={handleAddFriend}>
-                  <UserPlus size={24} color={COLORS.white} />
+                <Pressable 
+                  style={[styles.addButton, isSearching && styles.addButtonDisabled]} 
+                  onPress={handleSearchUser}
+                  disabled={isSearching}
+                >
+                  {isSearching ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <Search size={24} color={COLORS.white} />
+                  )}
                 </Pressable>
               </View>
+              
+              {/* Show loading state */}
+              {isSearching && searchUid && (
+                <View style={[styles.searchedUserCard, { justifyContent: 'center', paddingVertical: 20 }]}>
+                  <ActivityIndicator size="small" color={COLORS.red600} />
+                  <Text style={styles.loadingText}>Searching...</Text>
+                </View>
+              )}
+
+              {/* Show "not found" message */}
+              {!isSearching && searchUid && searchedUserQuery === null && (
+                <View style={[styles.searchedUserCard, { justifyContent: 'center', paddingVertical: 20 }]}>
+                  <Text style={styles.emptyText}>No user found with that UID</Text>
+                </View>
+              )}
+
+              {/* Show searched user */}
+              {!isSearching && searchedUserQuery && searchUid && searchedUserQuery.userId && (
+                <View style={styles.searchedUserCard}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarEmoji}>👤</Text>
+                  </View>
+                  <View style={styles.friendInfo}>
+                    <Text style={styles.friendName}>{searchedUserQuery.username}</Text>
+                    <Text style={styles.friendUid}>UID: {searchedUserQuery.uid || searchedUserQuery.userId}</Text>
+                  </View>
+                  <Pressable 
+                    style={[
+                      styles.sendRequestButton,
+                      searchedUserQuery.userId === userId && styles.sendRequestButtonDisabled
+                    ]} 
+                    onPress={handleAddFriend}
+                    disabled={searchedUserQuery.userId === userId}
+                  >
+                    <UserPlus size={20} color={COLORS.white} />
+                    <Text style={styles.sendRequestText}>
+                      {searchedUserQuery.userId === userId ? 'You' : 'Add'}
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
 
             {/* Friend Requests */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Incoming Requests</Text>
-              {[1, 2, 3].map((i) => (
-                <View key={i} style={styles.friendCard}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarEmoji}>
-                      {i === 1 ? '🐼' : i === 2 ? '🦊' : '🐨'}
-                    </Text>
-                  </View>
-                  <View style={styles.friendInfo}>
-                    <Text style={styles.friendName}>Foodie_{i * 234}</Text>
-                    <Text style={styles.friendUid}>UID: 9923-KZ-{i}</Text>
-                  </View>
-                  <View style={styles.friendActions}>
-                    <Pressable style={styles.acceptButton}>
-                      <Text style={styles.acceptButtonText}>Accept</Text>
-                    </Pressable>
-                    <Pressable style={styles.ignoreButton}>
-                      <Text style={styles.ignoreButtonText}>Ignore</Text>
-                    </Pressable>
-                  </View>
+              <Text style={styles.sectionTitle}>
+                Incoming Requests {friendRequests && friendRequests.length > 0 && `(${friendRequests.length})`}
+              </Text>
+              {friendRequests === undefined ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.red600} />
                 </View>
-              ))}
+              ) : friendRequests.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No pending requests</Text>
+                </View>
+              ) : (
+                friendRequests.map((request: any, index: number) => (
+                  <View key={request.requestId} style={styles.friendCard}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarEmoji}>
+                        {index % 3 === 0 ? '🐼' : index % 3 === 1 ? '🦊' : '🐨'}
+                      </Text>
+                    </View>
+                    <View style={styles.friendInfo}>
+                      <Text style={styles.friendName}>{request.fromUsername}</Text>
+                      <Text style={styles.friendUid}>UID: {request.fromUserId}</Text>
+                    </View>
+                    <View style={styles.friendActions}>
+                      <Pressable 
+                        style={styles.acceptButton}
+                        onPress={() => handleAcceptRequest(request.requestId, request.fromUserId)}
+                      >
+                        <Text style={styles.acceptButtonText}>Accept</Text>
+                      </Pressable>
+                      <Pressable 
+                        style={styles.ignoreButton}
+                        onPress={() => handleRejectRequest(request.requestId)}
+                      >
+                        <Text style={styles.ignoreButtonText}>Ignore</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         ) : (
@@ -203,34 +382,52 @@ export default function FriendScreen() {
             {/* My UID Card */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>My UID</Text>
-              <View style={styles.uidCard}>
-                <Text style={styles.uidText}>{myUid}</Text>
-                <Pressable onPress={handleCopyUid} style={styles.copyButton}>
-                  <Copy size={16} color={COLORS.stone500} />
-                </Pressable>
-              </View>
+              {currentUser === undefined ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.red600} />
+                </View>
+              ) : (
+                <View style={styles.uidCard}>
+                  <Text style={styles.uidText}>{currentUser?.formattedUid || currentUser?.uid || 'Loading...'}</Text>
+                  <Pressable onPress={handleCopyUid} style={styles.copyButton}>
+                    <Copy size={16} color={COLORS.stone500} />
+                  </Pressable>
+                </View>
+              )}
             </View>
 
             {/* Friend List */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Your Friends (12)</Text>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <View key={i} style={styles.friendCard}>
-                  <View style={styles.friendAvatar}>
-                    <User size={24} color={COLORS.red600} />
-                  </View>
-                  <View style={styles.friendInfo}>
-                    <Text style={styles.friendName}>Bestie {i}</Text>
-                    <View style={styles.onlineIndicator}>
-                      <View style={styles.onlineDot} />
-                      <Text style={styles.onlineText}>Online</Text>
-                    </View>
-                  </View>
-                  <Pressable style={styles.friendActionButton}>
-                    <UserCheck size={20} color={COLORS.stone400} />
-                  </Pressable>
+              <Text style={styles.sectionTitle}>
+                Your Friends {friends !== undefined && `(${friends.length})`}
+              </Text>
+              {friends === undefined ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={COLORS.red600} />
                 </View>
-              ))}
+              ) : friends.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No friends yet. Add some friends!</Text>
+                </View>
+              ) : (
+                friends.map((friend: any) => (
+                  <View key={friend.userId} style={styles.friendCard}>
+                    <View style={styles.friendAvatar}>
+                      <User size={24} color={COLORS.red600} />
+                    </View>
+                    <View style={styles.friendInfo}>
+                      <Text style={styles.friendName}>{friend.username}</Text>
+                      <View style={styles.onlineIndicator}>
+                        <View style={styles.onlineDot} />
+                        <Text style={styles.onlineText}>Online</Text>
+                      </View>
+                    </View>
+                    <Pressable style={styles.friendActionButton}>
+                      <UserCheck size={20} color={COLORS.stone400} />
+                    </Pressable>
+                  </View>
+                ))
+              )}
             </View>
           </View>
         )}
@@ -520,5 +717,58 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 12,
   },
+  searchedUserCard: {
+    backgroundColor: COLORS.white,
+    padding: 16,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    borderWidth: 1,
+    borderColor: COLORS.stone100,
+    marginTop: 12,
+  },
+  sendRequestButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.red600,
+    borderRadius: 12,
+    shadowColor: COLORS.red600,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sendRequestText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  addButtonDisabled: {
+    opacity: 0.5,
+  },
+  sendRequestButtonDisabled: {
+    opacity: 0.5,
+    backgroundColor: COLORS.stone400,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.stone400,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: COLORS.stone500,
+    marginLeft: 12,
+  },
 });
-

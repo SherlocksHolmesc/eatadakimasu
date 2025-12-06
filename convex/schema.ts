@@ -80,5 +80,26 @@ export default defineSchema({
   })
     .index("by_room", ["roomId"])
     .index("by_room_and_restaurant", ["roomId", "restaurantId"]),
+
+  // Friend requests
+  friendRequests: defineTable({
+    fromUserId: v.id("users"),
+    toUserId: v.id("users"),
+    status: v.string(), // "pending", "accepted", "rejected"
+    createdAt: v.number(),
+  })
+    .index("by_to_user", ["toUserId", "status"])
+    .index("by_from_user", ["fromUserId", "status"])
+    .index("by_users", ["fromUserId", "toUserId"]),
+
+  // Friendships (bidirectional)
+  friendships: defineTable({
+    userId1: v.id("users"),
+    userId2: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_user1", ["userId1"])
+    .index("by_user2", ["userId2"])
+    .index("by_users", ["userId1", "userId2"]),
 });
 
