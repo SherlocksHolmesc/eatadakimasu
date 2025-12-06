@@ -60,7 +60,7 @@ type GoogleGeocodeResponse = {
   status?: string;
 };
 
-export default function LocationScreen() {
+export default function SoloLocationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     roomCode?: string;
@@ -261,7 +261,7 @@ export default function LocationScreen() {
     setLoading(true);
     try {
       router.push({
-        pathname: '/group/preferences',
+        pathname: '/solo/preferences',
         params: {
           roomCode: params.roomCode,
           roomId: params.roomId,

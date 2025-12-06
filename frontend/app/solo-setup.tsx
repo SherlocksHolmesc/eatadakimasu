@@ -50,7 +50,7 @@ export default function SoloSetupScreen() {
       await AsyncStorage.setItem('soloRoomCode', result.roomCode);
       
       router.push({
-        pathname: '/group/location',
+        pathname: '/solo/location',
         params: { 
           roomCode: result.roomCode, 
           roomId: result.roomId.toString(), // Ensure it's a string

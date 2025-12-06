@@ -42,7 +42,8 @@
     },
     "extra": {
       "EXPO_PUBLIC_CONVEX_URL": "https://famous-shepherd-2.convex.cloud",
-      "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "935054965436-jr1aa42i3stvb5ud2lt9tkfebkdhmmpi.apps.googleusercontent.com"
+      "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "935054965436-jr1aa42i3stvb5ud2lt9tkfebkdhmmpi.apps.googleusercontent.com",
+      "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY": "AIzaSyAxFISyG5u-taGCpqVyUbUA8cVi7w6o0HE"
     }
   }
 }
