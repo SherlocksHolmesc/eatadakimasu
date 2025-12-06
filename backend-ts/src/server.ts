@@ -40,6 +40,14 @@ interface Vote {
 const votesDB: Vote[] = [];
 
 // Routes
+app.get('/', (_req: Request, res: Response) => {
+  res.json({ 
+    message: 'Eatadakimasu API', 
+    status: 'running',
+    endpoints: ['/api/health', '/api/rooms/create', '/api/restaurants', '/api/vote', '/api/results']
+  });
+});
+
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'healthy', service: 'eatadakimasu-backend-ts' });
 });

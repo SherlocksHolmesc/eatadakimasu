@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { Star, MapPin, Clock, Trophy, Home } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'https://eatadakimasu-backend.vercel.app';
 
 const COLORS = {
   white: '#FFFFFF',

@@ -30,7 +30,7 @@ import Constants from 'expo-constants';
 
 const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || 
                 process.env.EXPO_PUBLIC_BACKEND_URL || 
-                'http://localhost:8001';
+                'https://eatadakimasu-backend.vercel.app';
 
 // Debug: Log API URL on load
 if (__DEV__) {
