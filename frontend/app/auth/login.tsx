@@ -329,9 +329,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: '50%',
+    bottom: 0,
     backgroundColor: COLORS.rose50,
-    opacity: 0.5,
   },
   logoContainer: {
     alignItems: 'center',

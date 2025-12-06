@@ -245,10 +245,8 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 300,
+    bottom: 0,
     backgroundColor: COLORS.rose50,
-    borderBottomLeftRadius: 100,
-    borderBottomRightRadius: 100,
   },
   backButton: {
     width: 44,

@@ -35,6 +35,9 @@ const COLORS = {
   red600: '#dc2626',
   rose100: '#ffe4e6',
   green500: '#22c55e',
+  darkGray: '#1C1917',
+  lightGray: '#F5F5F4',
+  accent: '#DC2626',
 };
 
 const GOOGLE_PLACES_API_KEY = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 
@@ -151,7 +154,7 @@ export default function RoomWaitingScreen() {
         response = await fetch(apiUrl);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { predictions?: PlacePrediction[] };
       
       if (data.predictions) {
         setPredictions(data.predictions);
@@ -215,7 +218,7 @@ export default function RoomWaitingScreen() {
         response = await fetch(geocodeUrl);
       }
       
-      const data = await response.json();
+      const data = await response.json() as { results?: { formatted_address: string }[] };
 
       if (data.results && data.results.length > 0) {
         const formattedAddress = data.results[0].formatted_address;
@@ -372,10 +375,16 @@ export default function RoomWaitingScreen() {
         <ArrowLeft size={24} color={COLORS.stone700} />
       </Pressable>
 
-      <Animated.View
-        style={styles.content}
-        entering={FadeInDown.delay(100).springify()}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
+        <Animated.View
+          style={styles.content}
+          entering={FadeInDown.delay(100).springify()}
+        >
         {/* Title */}
         <Text style={styles.title}>Group Room</Text>
         <Text style={styles.description}>
@@ -503,6 +512,7 @@ export default function RoomWaitingScreen() {
           </Animated.View>
         )}
       </Animated.View>
+      </ScrollView>
 
       {/* Location Selection Modal */}
       <Modal
@@ -625,6 +635,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.stone50,
     paddingTop: 60,
     paddingHorizontal: 24,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   backButton: {
     width: 44,

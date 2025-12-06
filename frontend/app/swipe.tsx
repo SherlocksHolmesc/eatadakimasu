@@ -28,7 +28,7 @@ import * as Haptics from 'expo-haptics';
 import { X, Heart, Star, MapPin, Clock, ChevronLeft } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.3;
 
@@ -42,6 +42,8 @@ const COLORS = {
   stone900: '#1c1917',
   red600: '#dc2626',
   green500: '#22c55e',
+  green: '#22c55e',
+  accent: '#dc2626',
   rose100: '#ffe4e6',
 };
 

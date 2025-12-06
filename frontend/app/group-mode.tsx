@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -109,17 +109,26 @@ export default function GroupModeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       {/* Background Gradient */}
       <View style={styles.bgGradient} />
       
-      {/* Back button */}
-      <TouchableOpacity 
-        style={styles.backButton}
-        onPress={() => router.back()}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <ArrowLeft size={24} color={COLORS.stone700} />
-      </TouchableOpacity>
+        {/* Back button */}
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <ArrowLeft size={24} color={COLORS.stone700} />
+        </TouchableOpacity>
 
       {/* Logo - PNG Ramen Bowl */}
       <Animated.View 
@@ -159,10 +168,13 @@ export default function GroupModeScreen() {
 
         <TouchableOpacity 
           style={[styles.actionButton, styles.outlinedButton]}
-          onPress={() => {}}
+          onPress={joinRoom}
+          disabled={isJoining || !roomCode.trim()}
         >
           <UserPlus size={18} color={COLORS.red600} style={{ marginRight: 8 }} />
-          <Text style={styles.outlinedButtonText}>JOIN ROOM</Text>
+          <Text style={styles.outlinedButtonText}>
+            {isJoining ? 'JOINING...' : 'JOIN ROOM'}
+          </Text>
         </TouchableOpacity>
       </Animated.View>
 
@@ -194,7 +206,8 @@ export default function GroupModeScreen() {
           </Text>
         </TouchableOpacity>
       </Animated.View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -202,7 +215,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.white,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     padding: 24,
+    paddingBottom: 40,
   },
   bgGradient: {
     position: 'absolute',

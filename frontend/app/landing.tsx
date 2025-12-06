@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
   FadeInDown,
@@ -8,10 +8,9 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
-  FadeIn,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Users, User } from 'lucide-react-native';
+import { Users, User, ChevronRight } from 'lucide-react-native';
 import { BottomNavBar } from '../components/BottomNavBar';
 
 const COLORS = {
@@ -21,19 +20,13 @@ const COLORS = {
   stone300: '#d6d3d1',
   stone400: '#a8a29e',
   stone500: '#78716c',
+  stone600: '#57534e',
   stone700: '#44403c',
   stone900: '#1c1917',
   white: '#FFFFFF',
   accent: '#DC2626',
   lightGray: '#F5F5F4',
   darkGray: '#1C1917',
-  stone50: '#FAFAF9',
-  stone100: '#F5F5F4',
-  stone200: '#E7E5E4',
-  stone400: '#A8A29E',
-  stone500: '#78716C',
-  stone600: '#57534E',
-  stone900: '#1C1917',
   red50: '#FEF2F2',
   red600: '#DC2626',
 };
@@ -144,9 +137,11 @@ export default function LandingScreen() {
               style={styles.logoContainer}
               entering={FadeIn.delay(300).springify()}
             >
-              <View style={styles.logoPlaceholder}>
-                <Text style={styles.logoEmoji}>🍽️</Text>
-              </View>
+              <Image 
+                source={require('../assets/images/42aaecb8daf9fe805d264506738108e934067bf1e19a2bce4515936448bb6077.png')} 
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </Animated.View>
 
             <Text style={styles.title}>EATADAKIMASU</Text>
@@ -330,24 +325,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 20,
   },
+  logoImage: {
+    width: 120,
+    height: 120,
+  },
 
   header: {
     alignItems: 'center',
     marginBottom: 40,
-  },
-  logoContainer: {
-    marginBottom: 24,
-  },
-  logoPlaceholder: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    backgroundColor: COLORS.lightGray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoEmoji: {
-    fontSize: 64,
   },
   title: {
     fontSize: 28,

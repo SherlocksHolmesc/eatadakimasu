@@ -250,10 +250,9 @@ export default function RoomScreen() {
             </Animated.View>
             <Text style={styles.charCount}>{roomCode.length}/6 characters</Text>
             <AnimatedPressable
-              style={({ pressed }) => [
+              style={[
                 styles.primaryButton,
-                (loading || roomCode.length !== 6) && styles.buttonDisabled,
-                pressed && styles.primaryButtonPressed,
+                (loading || roomCode.length !== 6) && styles.buttonInactive,
               ]}
               onPress={handleJoinRoom}
               disabled={loading || roomCode.length !== 6}
@@ -406,7 +405,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
+    backgroundColor: COLORS.stone400,
+    shadowOpacity: 0.1,
+  },
+  buttonInactive: {
+    opacity: 0.7,
   },
   primaryButtonText: {
     fontSize: 16,

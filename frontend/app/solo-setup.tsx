@@ -37,7 +37,7 @@ export default function SoloSetupScreen() {
         return true;
       };
       
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
       
       // Load user ID
       const getUserId = async () => {
@@ -50,7 +50,7 @@ export default function SoloSetupScreen() {
       
       return () => {
         isMounted.current = false;
-        BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+        backHandler.remove();
         setIsCreating(false);
         setHasStarted(false);
       };
