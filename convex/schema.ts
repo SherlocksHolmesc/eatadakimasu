@@ -8,6 +8,9 @@ export default defineSchema({
     email: v.string(),
     passwordHash: v.optional(v.string()), // Optional for OAuth users
     googleId: v.optional(v.string()), // Google OAuth ID
+    bio: v.optional(v.string()), // User bio
+    location: v.optional(v.string()), // User location
+    profileImageId: v.optional(v.id("_storage")), // Profile image storage ID
     createdAt: v.number(),
   })
     .index("by_email", ["email"])
@@ -46,6 +49,7 @@ export default defineSchema({
         cuisines: v.optional(v.array(v.string())),
         distance: v.optional(v.number()),
         priceRange: v.optional(v.string()),
+        location: v.optional(v.string()),
       })
     ),
   })
@@ -60,8 +64,45 @@ export default defineSchema({
     restaurantId: v.string(),
     vote: v.string(), // "like" or "dislike"
     votedAt: v.number(),
+    // Store restaurant data for results display
+    restaurantData: v.optional(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        photo: v.optional(v.string()),
+        cuisine: v.string(),
+        rating: v.optional(v.number()),
+        price_range: v.optional(v.string()),
+        address: v.optional(v.string()),
+        location: v.optional(v.object({
+          lat: v.number(),
+          lng: v.number(),
+        })),
+      })
+    ),
   })
     .index("by_room", ["roomId"])
     .index("by_room_and_restaurant", ["roomId", "restaurantId"]),
+
+  // Friend requests
+  friendRequests: defineTable({
+    fromUserId: v.id("users"),
+    toUserId: v.id("users"),
+    status: v.string(), // "pending", "accepted", "rejected"
+    createdAt: v.number(),
+  })
+    .index("by_to_user", ["toUserId", "status"])
+    .index("by_from_user", ["fromUserId", "status"])
+    .index("by_users", ["fromUserId", "toUserId"]),
+
+  // Friendships (bidirectional)
+  friendships: defineTable({
+    userId1: v.id("users"),
+    userId2: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_user1", ["userId1"])
+    .index("by_user2", ["userId2"])
+    .index("by_users", ["userId1", "userId2"]),
 });
 

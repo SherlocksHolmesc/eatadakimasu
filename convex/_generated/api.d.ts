@@ -9,7 +9,9 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as friends from "../friends.js";
 import type * as rooms from "../rooms.js";
+import type * as votes from "../votes.js";
 
 import type {
   ApiFromModules,
@@ -19,7 +21,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  friends: typeof friends;
   rooms: typeof rooms;
+  votes: typeof votes;
 }>;
 
 /**

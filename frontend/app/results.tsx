@@ -75,13 +75,24 @@ export default function ResultsScreen() {
       
       const results = (data.results || []).map((restaurant: any) => ({
         ...restaurant,
-        votes: restaurant.vote_count || 0,
+        votes: restaurant.vote_count || restaurant.votes || 0,
         totalVotes: restaurant.totalVotes || 0,
       }))
       .filter((r: RestaurantWithVotes) => (r.votes || 0) > 0)
-      .sort((a: RestaurantWithVotes, b: RestaurantWithVotes) => (b.votes || 0) - (a.votes || 0));
+      .sort((a: RestaurantWithVotes, b: RestaurantWithVotes) => {
+        // First sort by votes (descending)
+        const voteDiff = (b.votes || 0) - (a.votes || 0);
+        if (voteDiff !== 0) return voteDiff;
+        
+        // If votes are equal, sort by rating (descending)
+        return (b.rating || 0) - (a.rating || 0);
+      });
 
-      setRestaurants(results);
+      console.log('Results loaded:', results.length, 'restaurants');
+      console.log('Top 4:', results.slice(0, 4).map(r => ({ name: r.name, votes: r.votes, rating: r.rating })));
+
+      // Show top 4 restaurants
+      setRestaurants(results.slice(0, 4));
     } catch (error) {
       console.error('Error loading results:', error);
       Alert.alert('Error', 'Failed to load results');
@@ -142,107 +153,120 @@ export default function ResultsScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {restaurants.map((restaurant, index) => (
+          {/* Winner Card - Top 1 */}
+          {restaurants[0] && (
             <AnimatedPressable
-              key={restaurant.id}
-              style={styles.restaurantCard}
-              entering={FadeInDown.delay(200 + index * 100).springify()}
+              style={styles.winnerCard}
+              entering={FadeInDown.delay(200).springify()}
             >
-              <View style={styles.rankBadge}>
-                {index === 0 && (
-                  <View
-                    style={[styles.rankBadgeInner, { backgroundColor: COLORS.gold }]}
-                  >
-                    <Text style={styles.rankText}>1</Text>
-                  </View>
-                )}
-                {index === 1 && (
-                  <View
-                    style={[
-                      styles.rankBadgeInner,
-                      { backgroundColor: COLORS.silver },
-                    ]}
-                  >
-                    <Text style={styles.rankText}>2</Text>
-                  </View>
-                )}
-                {index === 2 && (
-                  <View
-                    style={[
-                      styles.rankBadgeInner,
-                      { backgroundColor: COLORS.bronze },
-                    ]}
-                  >
-                    <Text style={styles.rankText}>3</Text>
-                  </View>
-                )}
-                {index > 2 && (
-                  <View
-                    style={[
-                      styles.rankBadgeInner,
-                      { backgroundColor: COLORS.stone700 },
-                    ]}
-                  >
-                    <Text style={styles.rankText}>{index + 1}</Text>
-                  </View>
-                )}
+              <View style={styles.winnerBadge}>
+                <Trophy size={24} color={COLORS.white} strokeWidth={2.5} />
               </View>
 
               <Image
-                source={{ uri: restaurant.photo }}
-                style={styles.restaurantImage}
+                source={{ uri: restaurants[0].photo }}
+                style={styles.winnerImage}
                 resizeMode="cover"
               />
 
-              <View style={styles.restaurantInfo}>
-                <Text style={styles.restaurantName} numberOfLines={1}>
-                  {restaurant.name}
+              <View style={styles.winnerOverlay}>
+                <Text style={styles.winnerLabel}>🏆 Winner</Text>
+                <Text style={styles.winnerName} numberOfLines={2}>
+                  {restaurants[0].name}
                 </Text>
 
-                <View style={styles.infoRow}>
+                <View style={styles.winnerInfoRow}>
                   <View style={styles.rating}>
-                    <Star size={14} color="#FFB800" fill="#FFB800" />
-                    <Text style={styles.ratingText}>
-                      {restaurant.rating.toFixed(1)}
+                    <Star size={16} color="#FFB800" fill="#FFB800" />
+                    <Text style={styles.winnerRatingText}>
+                      {restaurants[0].rating.toFixed(1)}
                     </Text>
                   </View>
-                  <Text style={styles.separator}>•</Text>
-                  <Text style={styles.price}>
-                    {getPriceSymbol(restaurant.price_range)}
+                  <Text style={styles.winnerSeparator}>•</Text>
+                  <Text style={styles.winnerPrice}>
+                    {getPriceSymbol(restaurants[0].price_range)}
                   </Text>
-                  <Text style={styles.separator}>•</Text>
-                  <Text style={styles.cuisine}>{restaurant.cuisine}</Text>
+                  <Text style={styles.winnerSeparator}>•</Text>
+                  <Text style={styles.winnerCuisine}>{restaurants[0].cuisine}</Text>
                 </View>
 
-                <View style={styles.metaRow}>
-                  <View style={styles.metaItem}>
-                    <MapPin size={12} color={COLORS.stone500} />
-                    <Text style={styles.metaText} numberOfLines={1}>
-                      {restaurant.address}
-                    </Text>
-                  </View>
+                <View style={styles.winnerMetaRow}>
+                  <MapPin size={14} color={COLORS.white} />
+                  <Text style={styles.winnerAddress} numberOfLines={1}>
+                    {restaurants[0].address}
+                  </Text>
                 </View>
 
-                {params.mode === 'group' && restaurant.votes && restaurant.totalVotes && (
-                  <View style={styles.voteContainer}>
-                    <View style={styles.voteBar}>
-                      <View
-                        style={[
-                          styles.voteBarFill,
-                          {
-                            width: `${(restaurant.votes / restaurant.totalVotes) * 100}%`,
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={styles.voteText}>
-                      {restaurant.votes} of {restaurant.totalVotes} votes
-                    </Text>
-                  </View>
-                )}
+                <View style={styles.winnerVoteContainer}>
+                  <Text style={styles.winnerVoteText}>
+                    ✓ {restaurants[0].votes} Approved Votes
+                  </Text>
+                </View>
               </View>
             </AnimatedPressable>
-          ))}
+          )}
+
+          {/* Top 2-4 Runners Up */}
+          {restaurants.length > 1 && (
+            <View style={styles.runnersUpSection}>
+              <Text style={styles.runnersUpTitle}>Other Top Choices</Text>
+              
+              {restaurants.slice(1).map((restaurant, index) => (
+                <AnimatedPressable
+                  key={restaurant.id}
+                  style={styles.runnerUpCard}
+                  entering={FadeInDown.delay(400 + index * 100).springify()}
+                >
+                  <View style={styles.runnerUpRankBadge}>
+                    {index === 0 && (
+                      <View style={[styles.rankBadgeInner, { backgroundColor: COLORS.silver }]}>
+                        <Text style={styles.rankText}>2</Text>
+                      </View>
+                    )}
+                    {index === 1 && (
+                      <View style={[styles.rankBadgeInner, { backgroundColor: COLORS.bronze }]}>
+                        <Text style={styles.rankText}>3</Text>
+                      </View>
+                    )}
+                    {index === 2 && (
+                      <View style={[styles.rankBadgeInner, { backgroundColor: COLORS.darkGray }]}>
+                        <Text style={styles.rankText}>4</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <Image
+                    source={{ uri: restaurant.photo }}
+                    style={styles.runnerUpImage}
+                    resizeMode="cover"
+                  />
+
+                  <View style={styles.runnerUpInfo}>
+                    <Text style={styles.runnerUpName} numberOfLines={1}>
+                      {restaurant.name}
+                    </Text>
+
+                    <View style={styles.runnerUpInfoRow}>
+                      <Star size={12} color="#FFB800" fill="#FFB800" />
+                      <Text style={styles.runnerUpRating}>
+                        {restaurant.rating.toFixed(1)}
+                      </Text>
+                      <Text style={styles.runnerUpSeparator}>•</Text>
+                      <Text style={styles.runnerUpPrice}>
+                        {getPriceSymbol(restaurant.price_range)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.runnerUpVotes}>
+                      <Text style={styles.runnerUpVoteText}>
+                        ✓ {restaurant.votes} votes
+                      </Text>
+                    </View>
+                  </View>
+                </AnimatedPressable>
+              ))}
+            </View>
+          )}
 
           <View style={styles.footerSpacer} />
         </ScrollView>
@@ -298,7 +322,193 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 160,
+    paddingBottom: 120,
+  },
+  winnerCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 10,
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: COLORS.gold,
+  },
+  winnerBadge: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.gold,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  winnerImage: {
+    width: '100%',
+    height: 280,
+  },
+  winnerOverlay: {
+    padding: 24,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+  },
+  winnerLabel: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.gold,
+    marginBottom: 8,
+  },
+  winnerName: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.white,
+    marginBottom: 12,
+  },
+  winnerInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  winnerRatingText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  winnerSeparator: {
+    fontSize: 16,
+    color: COLORS.white,
+    opacity: 0.5,
+  },
+  winnerPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  winnerCuisine: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.white,
+  },
+  winnerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  winnerAddress: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.white,
+    opacity: 0.8,
+    flex: 1,
+  },
+  winnerVoteContainer: {
+    backgroundColor: 'rgba(255,215,0,0.2)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  winnerVoteText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.gold,
+    textAlign: 'center',
+  },
+  runnersUpSection: {
+    marginBottom: 24,
+  },
+  runnersUpTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.darkGray,
+    marginBottom: 16,
+  },
+  runnerUpCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.lightGray,
+    flexDirection: 'row',
+  },
+  runnerUpRankBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    zIndex: 10,
+  },
+  runnerUpImage: {
+    width: 120,
+    height: 120,
+  },
+  runnerUpInfo: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  runnerUpName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+    marginBottom: 6,
+  },
+  runnerUpInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  runnerUpRating: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  runnerUpSeparator: {
+    fontSize: 13,
+    color: COLORS.darkGray,
+    opacity: 0.3,
+  },
+  runnerUpPrice: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  runnerUpVotes: {
+    backgroundColor: COLORS.lightGray,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  runnerUpVoteText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.accent,
   },
   restaurantCard: {
     backgroundColor: COLORS.white,

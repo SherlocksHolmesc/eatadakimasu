@@ -38,6 +38,39 @@ export default function PreferencesWaitingScreen() {
   React.useEffect(() => {
     if (allMembersReady && roomData) {
       console.log('All members have set preferences! Navigating to swipe...');
+      
+      // Aggregate preferences from all members
+      const allCuisines = new Set<string>();
+      let totalMinBudget = 0;
+      let totalMaxBudget = 0;
+      let location = 'Kuala Lumpur, Malaysia'; // Default location
+      
+      roomData.members.forEach((member: any) => {
+        if (member.preferences) {
+          // Collect all unique cuisines
+          if (member.preferences.cuisines) {
+            member.preferences.cuisines.forEach((c: string) => allCuisines.add(c));
+          }
+          
+          // Use the first member's location (or you could aggregate/vote)
+          if (member.preferences.location) {
+            location = member.preferences.location;
+          }
+          
+          // Extract budget from priceRange (format: "10-50")
+          if (member.preferences.priceRange) {
+            const [min, max] = member.preferences.priceRange.split('-').map(Number);
+            totalMinBudget += min;
+            totalMaxBudget += max;
+          }
+        }
+      });
+      
+      // Average the budgets
+      const memberCount = roomData.members.length;
+      const avgMinBudget = Math.floor(totalMinBudget / memberCount);
+      const avgMaxBudget = Math.floor(totalMaxBudget / memberCount);
+      
       // Small delay to show "Everyone's ready!" message
       setTimeout(() => {
         router.push({
@@ -46,6 +79,10 @@ export default function PreferencesWaitingScreen() {
             roomCode,
             roomId,
             mode,
+            location: location,
+            cuisines: Array.from(allCuisines).join(','),
+            minBudget: String(avgMinBudget),
+            maxBudget: String(avgMaxBudget),
           },
         });
       }, 2000);

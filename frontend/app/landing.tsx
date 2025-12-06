@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, Pressable, Platform, Dimensions, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
   FadeInDown,
@@ -6,18 +7,12 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withRepeat,
   withTiming,
-  withDelay,
-  withSequence,
-  Easing,
-  runOnJS,
+  FadeIn,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { Users, User, ChevronRight, Home, UserPlus, CircleUser } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+import { Users, User } from 'lucide-react-native';
+import { BottomNavBar } from '../components/BottomNavBar';
 
 const COLORS = {
   stone50: '#fafaf9',
@@ -29,102 +24,205 @@ const COLORS = {
   stone700: '#44403c',
   stone900: '#1c1917',
   white: '#FFFFFF',
-  red500: '#ef4444',
-  red600: '#dc2626',
-  rose50: '#fff1f2',
-  rose100: '#ffe4e6',
+  accent: '#DC2626',
+  lightGray: '#F5F5F4',
+  darkGray: '#1C1917',
+  stone50: '#FAFAF9',
+  stone100: '#F5F5F4',
+  stone200: '#E7E5E4',
+  stone400: '#A8A29E',
+  stone500: '#78716C',
+  stone600: '#57534E',
+  stone900: '#1C1917',
+  red50: '#FEF2F2',
+  red600: '#DC2626',
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-// Falling food emoji component - falls from top to bottom
-function FallingEmoji({ emoji, startX, delay, duration }: { emoji: string; startX: number; delay: number; duration: number }) {
-  const translateY = useSharedValue(-50);
-  const translateX = useSharedValue(0);
-  const opacity = useSharedValue(0);
-  const rotate = useSharedValue(0);
+// Food emojis for background animation
+const FOOD_EMOJIS = ['🍕', '🍔', '🍜', '🍱', '🌮', '🍣', '🍦', '🍩'];
 
-  useEffect(() => {
-    // Start animation after delay
-    opacity.value = withDelay(delay, withTiming(0.3, { duration: 500 }));
-    
-    translateY.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(SCREEN_HEIGHT + 50, { duration: duration, easing: Easing.linear }),
-        -1,
-        false
-      )
-    );
-    
-    // Slight horizontal sway
-    translateX.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(15, { duration: duration / 4, easing: Easing.inOut(Easing.ease) }),
-          withTiming(-15, { duration: duration / 2, easing: Easing.inOut(Easing.ease) }),
-          withTiming(0, { duration: duration / 4, easing: Easing.inOut(Easing.ease) })
-        ),
-        -1,
-        false
-      )
-    );
-    
-    // Rotation
-    rotate.value = withDelay(
-      delay,
-      withRepeat(
-        withTiming(360, { duration: duration, easing: Easing.linear }),
-        -1,
-        false
-      )
-    );
+function FallingFood({ emoji, index }: { emoji: string; index: number }) {
+  const translateY = useSharedValue(-100);
+  const rotate = useSharedValue(0);
+  const left = useSharedValue(Math.random() * 100);
+
+  React.useEffect(() => {
+    translateY.value = withTiming(1200, {
+      duration: 20000 + Math.random() * 20000,
+    });
+    rotate.value = withTiming(360, {
+      duration: 20000 + Math.random() * 20000,
+    });
   }, []);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateY: translateY.value },
-      { translateX: translateX.value },
       { rotate: `${rotate.value}deg` },
     ],
-    opacity: opacity.value,
-    left: startX,
+    left: `${left.value}%`,
   }));
 
   return (
-    <Animated.Text style={[styles.fallingEmoji, animatedStyle]}>
-      {emoji}
-    </Animated.Text>
+    <Animated.View
+      style={[
+        styles.fallingFood,
+        animatedStyle,
+      ]}
+    >
+      <Text style={styles.foodEmoji}>{emoji}</Text>
+    </Animated.View>
   );
 }
 
-// Ramen Bowl Logo Component - using PNG image
-function RamenLogo() {
+export default function LandingScreen() {
+  const router = useRouter();
+  const [hoveredMode, setHoveredMode] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'home' | 'friends' | 'profile'>('home');
+
+  const handleSolo = () => {
+    router.push('/solo-setup');
+  };
+
+  const handleGroup = () => {
+    router.push('/group/room');
+  };
+
+  const handleTabChange = (tab: 'home' | 'friends' | 'profile') => {
+    setActiveTab(tab);
+    if (tab === 'friends') {
+      router.push('/friends');
+    } else if (tab === 'profile') {
+      router.push('/profile');
+    } else {
+      router.push('/landing');
+    }
+  };
+
+  const modes = [
+    {
+      id: 'solo',
+      icon: User,
+      title: 'Solo Mode',
+      description: 'Decide on your own',
+      onPress: handleSolo,
+    },
+    {
+      id: 'group',
+      icon: Users,
+      title: 'Group Mode',
+      description: 'Decide together with friends',
+      onPress: handleGroup,
+    },
+  ];
+
   return (
-    <View style={styles.logoContainer}>
-      <Image
-        source={require('../assets/images/42aaecb8daf9fe805d264506738108e934067bf1e19a2bce4515936448bb6077.png')}
-        style={{ width: 120, height: 120 }}
-        resizeMode="contain"
-      />
+    <View style={styles.container}>
+      {/* Background Japanese Pattern */}
+      <View style={styles.bgCircle1} />
+      <View style={styles.bgCircle2} />
+
+      {/* Spinning Falling Food Background */}
+      {FOOD_EMOJIS.map((emoji, index) => (
+        <FallingFood key={index} emoji={emoji} index={index} />
+      ))}
+
+      {/* Main Content */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
+          {/* Header */}
+          <Animated.View
+            style={styles.header}
+            entering={FadeInDown.delay(200).springify()}
+          >
+            <Animated.View
+              style={styles.logoContainer}
+              entering={FadeIn.delay(300).springify()}
+            >
+              <View style={styles.logoPlaceholder}>
+                <Text style={styles.logoEmoji}>🍽️</Text>
+              </View>
+            </Animated.View>
+
+            <Text style={styles.title}>EATADAKIMASU</Text>
+            <Text style={styles.subtitle}>LET'S FIND YOUR NEXT MEAL</Text>
+          </Animated.View>
+
+          {/* Mode selection cards */}
+          <Animated.View
+            style={styles.modesContainer}
+            entering={FadeInDown.delay(400).springify()}
+          >
+            {modes.map((mode, index) => {
+              const Icon = mode.icon;
+              const isHovered = hoveredMode === mode.id;
+
+              return (
+                <ModeCard
+                  key={mode.id}
+                  icon={Icon}
+                  title={mode.title}
+                  description={mode.description}
+                  onPress={mode.onPress}
+                  delay={0.4 + index * 0.1}
+                  isHovered={isHovered}
+                  onHoverStart={() => setHoveredMode(mode.id)}
+                  onHoverEnd={() => setHoveredMode(null)}
+                />
+              );
+            })}
+          </Animated.View>
+
+          {/* Bottom dots indicator */}
+          <Animated.View
+            style={styles.dotsContainer}
+            entering={FadeInDown.delay(600)}
+          >
+            {[0, 1, 2].map((index) => (
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  index === 0 && styles.dotActive,
+                ]}
+              />
+            ))}
+          </Animated.View>
+        </View>
+      </ScrollView>
+
+      {/* Bottom Navigation */}
+      <BottomNavBar activeTab={activeTab} onTabChange={handleTabChange} />
     </View>
   );
 }
 
-function ActionButton({
-  title,
-  subtitle,
-  icon,
-  onPress,
-  delay,
-}: {
+interface ModeCardProps {
+  icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
   title: string;
-  subtitle: string;
-  icon: React.ReactNode;
+  description: string;
   onPress: () => void;
   delay: number;
-}) {
+  isHovered: boolean;
+  onHoverStart: () => void;
+  onHoverEnd: () => void;
+}
+
+function ModeCard({
+  icon: Icon,
+  title,
+  description,
+  onPress,
+  delay,
+  isHovered,
+  onHoverStart,
+  onHoverEnd,
+}: ModeCardProps) {
   const scale = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -136,155 +234,86 @@ function ActionButton({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     scale.value = withSpring(0.98);
+    onHoverStart();
   };
 
   const handlePressOut = () => {
     scale.value = withSpring(1);
+    onHoverEnd();
   };
 
   return (
     <AnimatedPressable
-      style={[styles.button, animatedStyle]}
+      style={[styles.modeCard, isHovered && styles.modeCardHovered, animatedStyle]}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       entering={FadeInDown.delay(delay).springify()}
     >
-      <View style={styles.iconContainer}>{icon}</View>
+      <View style={[styles.iconContainer, isHovered && styles.iconContainerHovered]}>
+        <Icon
+          size={24}
+          color={isHovered ? COLORS.red600 : COLORS.stone900}
+          strokeWidth={2}
+        />
+      </View>
+
       <View style={styles.textContainer}>
-        <Text style={styles.buttonTitle}>{title}</Text>
-        <Text style={styles.buttonSubtitle}>{subtitle}</Text>
+        <Text style={styles.modeTitle}>{title}</Text>
+        <Text style={styles.modeDescription}>{description}</Text>
+      </View>
+
+      <View style={[styles.arrowContainer, isHovered && styles.arrowContainerHovered]}>
+        <Text style={styles.arrow}>→</Text>
       </View>
       <ChevronRight size={20} color={COLORS.stone300} />
     </AnimatedPressable>
   );
 }
 
-export default function LandingScreen() {
-  const router = useRouter();
-
-  const handleSolo = () => {
-    router.push('/solo-setup');
-  };
-
-  const handleGroup = () => {
-    router.push('/group/room');
-  };
-
-  const handleNavHome = () => {
-    // Already on home
-  };
-
-  const handleNavFriends = () => {
-    router.push('/friends');
-  };
-
-  const handleNavProfile = () => {
-    router.push('/profile');
-  };
-
-  // Falling emoji configurations
-  const fallingEmojis = [
-    { emoji: '🍣', startX: 20, delay: 0, duration: 8000 },
-    { emoji: '🍩', startX: SCREEN_WIDTH - 60, delay: 1000, duration: 9000 },
-    { emoji: '🍜', startX: 80, delay: 2000, duration: 7500 },
-    { emoji: '🥟', startX: SCREEN_WIDTH - 100, delay: 500, duration: 8500 },
-    { emoji: '🍙', startX: SCREEN_WIDTH / 2 - 20, delay: 1500, duration: 9500 },
-    { emoji: '🍡', startX: 40, delay: 3000, duration: 7000 },
-    { emoji: '🍕', startX: SCREEN_WIDTH - 80, delay: 2500, duration: 8000 },
-    { emoji: '🍔', startX: SCREEN_WIDTH / 2 + 30, delay: 3500, duration: 8500 },
-  ];
-
-  return (
-    <View style={styles.container}>
-      {/* Background gradient overlay */}
-      <View style={styles.bgGradient} />
-      
-      {/* Falling food emojis */}
-      {fallingEmojis.map((item, index) => (
-        <FallingEmoji
-          key={index}
-          emoji={item.emoji}
-          startX={item.startX}
-          delay={item.delay}
-          duration={item.duration}
-        />
-      ))}
-      
-      {/* Header with Logo */}
-      <Animated.View
-        style={styles.header}
-        entering={FadeInDown.duration(800).springify()}
-      >
-        <RamenLogo />
-        <Text style={styles.title}>EATADAKIMASU</Text>
-        <Text style={styles.subtitle}>LET'S FIND YOUR NEXT MEAL</Text>
-      </Animated.View>
-
-      <View style={styles.buttonsContainer}>
-        <ActionButton
-          title="Solo Mode"
-          subtitle="Decide on your own"
-          icon={<User size={24} color={COLORS.stone700} strokeWidth={1.5} />}
-          onPress={handleSolo}
-          delay={400}
-        />
-
-        <ActionButton
-          title="Group Mode"
-          subtitle="Decide together with friends"
-          icon={<Users size={24} color={COLORS.stone700} strokeWidth={1.5} />}
-          onPress={handleGroup}
-          delay={500}
-        />
-      </View>
-
-      {/* Page indicator dots */}
-      <Animated.View
-        style={styles.dotsContainer}
-        entering={FadeIn.delay(700)}
-      >
-        <View style={[styles.dot, styles.activeDot]} />
-        <View style={styles.dot} />
-        <View style={styles.dot} />
-      </Animated.View>
-
-      {/* Bottom Navigation Bar */}
-      <Animated.View
-        style={styles.navbar}
-        entering={FadeInDown.delay(600).springify()}
-      >
-        <Pressable style={[styles.navItem, styles.navItemActive]} onPress={handleNavHome}>
-          <Home size={22} color={COLORS.white} strokeWidth={2} />
-        </Pressable>
-        <Pressable style={styles.navItem} onPress={handleNavFriends}>
-          <UserPlus size={22} color={COLORS.stone400} strokeWidth={1.5} />
-        </Pressable>
-        <Pressable style={styles.navItem} onPress={handleNavProfile}>
-          <CircleUser size={22} color={COLORS.stone400} strokeWidth={1.5} />
-        </Pressable>
-      </Animated.View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 24,
-    position: 'relative',
+    backgroundColor: COLORS.stone50,
     overflow: 'hidden',
   },
-  bgGradient: {
+  bgCircle1: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: COLORS.rose50,
+    top: -128,
+    right: -128,
+    width: 256,
+    height: 256,
+    backgroundColor: 'rgba(220, 38, 38, 0.05)',
+    borderRadius: 128,
+  },
+  bgCircle2: {
+    position: 'absolute',
+    bottom: -192,
+    left: -192,
+    width: 384,
+    height: 384,
+    backgroundColor: 'rgba(168, 162, 158, 0.2)',
+    borderRadius: 192,
+  },
+  fallingFood: {
+    position: 'absolute',
+    opacity: 0.09,
+  },
+  foodEmoji: {
+    fontSize: 32,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 80,
+    paddingBottom: 40,
+    maxWidth: 400,
+    width: '100%',
+    alignSelf: 'center',
   },
   fallingEmoji: {
     position: 'absolute',
@@ -304,119 +333,108 @@ const styles = StyleSheet.create({
 
   header: {
     alignItems: 'center',
-    marginTop: 120,
-    marginBottom: 32,
+    marginBottom: 40,
+  },
+  logoContainer: {
+    marginBottom: 24,
+  },
+  logoPlaceholder: {
+    width: 128,
+    height: 128,
+    borderRadius: 64,
+    backgroundColor: COLORS.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoEmoji: {
+    fontSize: 64,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '900',
     color: COLORS.red600,
     marginBottom: 8,
     letterSpacing: 4,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.stone500,
-    letterSpacing: 2,
+    letterSpacing: 1,
     fontWeight: '500',
   },
-  buttonsContainer: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    marginTop: 24,
+  modesContainer: {
     gap: 16,
+    marginBottom: 32,
   },
-  button: {
+  modeCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    borderRadius: 12,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.stone100,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 1,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  modeCardHovered: {
+    borderColor: COLORS.red600,
+    backgroundColor: COLORS.red50,
   },
   iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.stone100,
+    borderRadius: 12,
+    backgroundColor: COLORS.stone50,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
+  iconContainerHovered: {
+    backgroundColor: COLORS.red50,
+  },
   textContainer: {
     flex: 1,
   },
-  buttonTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+  modeTitle: {
+    fontSize: 18,
+    fontWeight: '700',
     color: COLORS.stone900,
-    marginBottom: 3,
+    marginBottom: 2,
   },
-  buttonSubtitle: {
-    fontSize: 13,
+  modeDescription: {
+    fontSize: 12,
+    color: COLORS.stone500,
+  },
+  arrowContainer: {
+    marginLeft: 8,
+  },
+  arrow: {
+    fontSize: 20,
     color: COLORS.stone400,
-    fontWeight: '400',
   },
-  
-  // Page indicator dots
+  arrowContainerHovered: {},
   dotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 24,
+    marginTop: 32,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.stone300,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.stone400,
   },
-  activeDot: {
+  dotActive: {
     width: 24,
     backgroundColor: COLORS.red600,
-    borderRadius: 4,
-  },
-
-  // Bottom Navigation Bar
-  navbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: 32,
-    paddingVertical: 12,
-    paddingHorizontal: 40,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -4,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 8,
-    gap: 32,
-    alignSelf: 'center',
-  },
-  navItem: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  navItemActive: {
-    backgroundColor: COLORS.red600,
-    width: 56,
-    height: 44,
-    borderRadius: 22,
   },
 });
