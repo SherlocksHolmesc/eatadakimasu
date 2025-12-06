@@ -1,17 +1,46 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share, Platform, Pressable, Modal } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  Share,
+  Platform,
+  Pressable,
+  Modal,
+  TextInput,
+  FlatList,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Navigation, Search } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import * as Location from 'expo-location';
+import Constants from 'expo-constants';
 
 const COLORS = {
   white: '#FFFFFF',
   accent: '#ff2346',
   lightGray: '#f5f5f5',
   darkGray: '#333333',
+};
+
+const GOOGLE_PLACES_API_KEY = Constants.expoConfig?.extra?.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 
+                               process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || 
+                               'AIzaSyAxFISyG5u-taGCpqVyUbUA8cVi7w6o0HE';
+
+type PlacePrediction = {
+  place_id: string;
+  description: string;
+  structured_formatting: {
+    main_text: string;
+    secondary_text: string;
+  };
 };
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -23,6 +52,12 @@ export default function RoomWaitingScreen() {
 
   const [currentUserId, setCurrentUserId] = React.useState<string>('');
   const [showLeaveConfirm, setShowLeaveConfirm] = React.useState(false);
+  const [showLocationModal, setShowLocationModal] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [predictions, setPredictions] = React.useState<PlacePrediction[]>([]);
+  const [loadingPredictions, setLoadingPredictions] = React.useState(false);
+  const [loadingGPS, setLoadingGPS] = React.useState(false);
+  const [selectedLocation, setSelectedLocation] = React.useState<string>('');
 
   // Real-time query - automatically updates when members join/leave
   const roomData = useQuery(api.rooms.getRoom, 
@@ -38,6 +73,7 @@ export default function RoomWaitingScreen() {
   const setUserReadyMutation = useMutation(api.rooms.setUserReady);
   const leaveRoomMutation = useMutation(api.rooms.leaveRoom);
   const startSessionMutation = useMutation(api.rooms.startSession);
+  const updateMemberPreferencesMutation = useMutation(api.rooms.updateMemberPreferences);
 
   React.useEffect(() => {
     const getUserId = async () => {
@@ -78,7 +114,7 @@ export default function RoomWaitingScreen() {
       const currentMember = roomData.members.find((m: any) => m.userId === currentUserId);
       if (!currentMember?.preferences) {
         router.push({
-          pathname: '/group/location',
+          pathname: '/group/preferences',
           params: { roomCode, roomId, mode: 'group' }
         });
       }
@@ -86,6 +122,125 @@ export default function RoomWaitingScreen() {
       console.log('❌ Conditions not met for navigation');
     }
   }, [roomData, hasNavigated]);
+
+  const fetchPredictions = async (input: string) => {
+    if (!input.trim() || input.length < 2) {
+      setPredictions([]);
+      return;
+    }
+
+    setLoadingPredictions(true);
+    try {
+      const apiUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&key=${GOOGLE_PLACES_API_KEY}&components=country:my`;
+      
+      let response: Response;
+      if (Platform.OS === 'web') {
+        try {
+          response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`);
+        } catch {
+          response = await fetch(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`);
+        }
+      } else {
+        response = await fetch(apiUrl);
+      }
+
+      const data = await response.json();
+      
+      if (data.predictions) {
+        setPredictions(data.predictions);
+      }
+    } catch (error) {
+      console.error('Error fetching predictions:', error);
+    } finally {
+      setLoadingPredictions(false);
+    }
+  };
+
+  const handleSelectPlace = (place: PlacePrediction) => {
+    setSelectedLocation(place.description);
+    setSearchQuery(place.description);
+    setPredictions([]);
+    setShowLocationModal(false);
+    
+    // Update location in member preferences
+    if (roomId && currentUserId) {
+      updateMemberPreferencesMutation({
+        roomId: roomId as any,
+        userId: currentUserId as any,
+        preferences: {
+          location: place.description,
+        },
+      }).catch((error) => {
+        console.error('Error updating location:', error);
+        Alert.alert('Error', 'Failed to save location');
+      });
+    }
+    
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  };
+
+  const handleUseCurrentLocation = async () => {
+    setLoadingGPS(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required to use this feature.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.coords.latitude},${location.coords.longitude}&key=${GOOGLE_PLACES_API_KEY}`;
+      
+      let response: Response;
+      if (Platform.OS === 'web') {
+        try {
+          response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(geocodeUrl)}`);
+        } catch {
+          response = await fetch(`https://corsproxy.io/?${encodeURIComponent(geocodeUrl)}`);
+        }
+      } else {
+        response = await fetch(geocodeUrl);
+      }
+      
+      const data = await response.json();
+
+      if (data.results && data.results.length > 0) {
+        const formattedAddress = data.results[0].formatted_address;
+        setSelectedLocation(formattedAddress);
+        setSearchQuery(formattedAddress);
+        setShowLocationModal(false);
+        setPredictions([]);
+
+        // Update location in member preferences
+        if (roomId && currentUserId) {
+          updateMemberPreferencesMutation({
+            roomId: roomId as any,
+            userId: currentUserId as any,
+            preferences: {
+              location: formattedAddress,
+            },
+          }).catch((error) => {
+            console.error('Error updating location:', error);
+          });
+        }
+
+        if (Platform.OS !== 'web') {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+      }
+    } catch (error) {
+      console.error('Location error:', error);
+      Alert.alert('Error', 'Failed to get your location. Please try again.');
+    } finally {
+      setLoadingGPS(false);
+    }
+  };
 
   const handleShare = async () => {
     try {
@@ -144,10 +299,10 @@ export default function RoomWaitingScreen() {
       });
       console.log('Session started successfully!');
       
-      // Navigate immediately for the host to location screen (first step)
-      console.log('Navigating host to location...');
+      // Navigate immediately for the host to preferences screen
+      console.log('Navigating host to preferences...');
       router.push({
-        pathname: '/group/location',
+        pathname: '/group/preferences',
         params: { roomCode, roomId, mode: 'group' }
       });
     } catch (error: any) {
@@ -219,6 +374,36 @@ export default function RoomWaitingScreen() {
         <Text style={styles.description}>
           Share the room code with your friends to join
         </Text>
+
+        {/* Location Display/Edit - Host Only */}
+        {isHost && (
+          <Animated.View 
+            style={styles.locationContainer}
+            entering={FadeInDown.delay(150).springify()}
+          >
+            <View style={styles.locationHeader}>
+              <MapPin size={20} color={COLORS.accent} />
+              <Text style={styles.locationLabel}>Location</Text>
+            </View>
+            {selectedLocation ? (
+              <Pressable 
+                style={styles.locationValue}
+                onPress={() => setShowLocationModal(true)}
+              >
+                <Text numberOfLines={1} style={styles.locationValueText}>
+                  {selectedLocation}
+                </Text>
+              </Pressable>
+            ) : (
+              <Pressable 
+                style={styles.selectLocationButton}
+                onPress={() => setShowLocationModal(true)}
+              >
+                <Text style={styles.selectLocationText}>Select location...</Text>
+              </Pressable>
+            )}
+          </Animated.View>
+        )}
 
         {/* Room Code Display */}
         <Animated.View 
@@ -312,6 +497,82 @@ export default function RoomWaitingScreen() {
         )}
       </Animated.View>
 
+      {/* Location Selection Modal */}
+      <Modal
+        visible={showLocationModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationModal(false)}
+      >
+        <View style={styles.locationModalContainer}>
+          <View style={styles.locationModalContent}>
+            <View style={styles.locationModalHeader}>
+              <Text style={styles.locationModalTitle}>Select Location</Text>
+              <Pressable onPress={() => setShowLocationModal(false)}>
+                <Text style={styles.locationModalClose}>✕</Text>
+              </Pressable>
+            </View>
+
+            {/* GPS Button */}
+            <Pressable 
+              style={styles.gpsButton}
+              onPress={handleUseCurrentLocation}
+              disabled={loadingGPS}
+            >
+              {loadingGPS ? (
+                <ActivityIndicator color={COLORS.white} />
+              ) : (
+                <>
+                  <Navigation size={20} color={COLORS.white} />
+                  <Text style={styles.gpsButtonText}>Use Current Location</Text>
+                </>
+              )}
+            </Pressable>
+
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+              <Search size={18} color={COLORS.darkGray} style={{ marginRight: 8 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search location..."
+                placeholderTextColor={COLORS.darkGray}
+                value={searchQuery}
+                onChangeText={(text) => {
+                  setSearchQuery(text);
+                  fetchPredictions(text);
+                }}
+              />
+            </View>
+
+            {/* Predictions List */}
+            {loadingPredictions ? (
+              <ActivityIndicator size="large" color={COLORS.accent} style={{ marginTop: 20 }} />
+            ) : (
+              <FlatList
+                data={predictions}
+                keyExtractor={(item) => item.place_id}
+                renderItem={({ item }) => (
+                  <Pressable 
+                    style={styles.predictionItem}
+                    onPress={() => handleSelectPlace(item)}
+                  >
+                    <MapPin size={16} color={COLORS.darkGray} style={{ marginRight: 8 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.predictionMainText}>
+                        {item.structured_formatting.main_text}
+                      </Text>
+                      <Text style={styles.predictionSecondaryText}>
+                        {item.structured_formatting.secondary_text}
+                      </Text>
+                    </View>
+                  </Pressable>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Leave Confirmation Modal */}
       <Modal
         visible={showLeaveConfirm}
@@ -379,6 +640,138 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     marginBottom: 40,
     lineHeight: 24,
+  },
+  locationContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  locationLabel: {
+    fontSize: 12,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  locationValue: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 12,
+  },
+  locationValueText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+  },
+  selectLocationButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.accent,
+    borderStyle: 'dashed',
+  },
+  selectLocationText: {
+    fontSize: 14,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+    fontWeight: '500',
+  },
+  locationModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  locationModalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '90%',
+  },
+  locationModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  locationModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  locationModalClose: {
+    fontSize: 24,
+    color: COLORS.darkGray,
+    opacity: 0.6,
+  },
+  gpsButton: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.accent,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  gpsButtonText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.lightGray,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    fontSize: 14,
+    color: COLORS.darkGray,
+  },
+  predictionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.lightGray,
+  },
+  predictionMainText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    marginBottom: 4,
+  },
+  predictionSecondaryText: {
+    fontSize: 12,
+    color: COLORS.darkGray,
+    opacity: 0.6,
   },
   loadingText: {
     fontSize: 16,
