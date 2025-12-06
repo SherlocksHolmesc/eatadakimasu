@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import Animated, {
   FadeInDown,
@@ -309,7 +310,16 @@ export default function FriendScreen() {
               {!isSearching && searchedUserQuery && searchUid && searchedUserQuery.userId && (
                 <View style={styles.searchedUserCard}>
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarEmoji}>👤</Text>
+                    {searchedUserQuery.profileImageUrl ? (
+                      <Image
+                        key={searchedUserQuery.profileImageUrl}
+                        source={{ uri: searchedUserQuery.profileImageUrl }}
+                        style={styles.avatarImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={styles.avatarEmoji}>👤</Text>
+                    )}
                   </View>
                   <View style={styles.friendInfo}>
                     <Text style={styles.friendName}>{searchedUserQuery.username}</Text>
@@ -349,9 +359,18 @@ export default function FriendScreen() {
                 friendRequests.map((request: any, index: number) => (
                   <View key={request.requestId} style={styles.friendCard}>
                     <View style={styles.avatar}>
-                      <Text style={styles.avatarEmoji}>
-                        {index % 3 === 0 ? '🐼' : index % 3 === 1 ? '🦊' : '🐨'}
-                      </Text>
+                      {request.fromProfileImageUrl ? (
+                        <Image
+                          key={request.fromProfileImageUrl}
+                          source={{ uri: request.fromProfileImageUrl }}
+                          style={styles.avatarImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={styles.avatarEmoji}>
+                          {index % 3 === 0 ? '🐼' : index % 3 === 1 ? '🦊' : '🐨'}
+                        </Text>
+                      )}
                     </View>
                     <View style={styles.friendInfo}>
                       <Text style={styles.friendName}>{request.fromUsername}</Text>
@@ -410,11 +429,40 @@ export default function FriendScreen() {
                   <Text style={styles.emptyText}>No friends yet. Add some friends!</Text>
                 </View>
               ) : (
-                friends.map((friend: any) => (
-                  <View key={friend.userId} style={styles.friendCard}>
-                    <View style={styles.friendAvatar}>
-                      <User size={24} color={COLORS.red600} />
-                    </View>
+                friends.map((friend: any) => {
+                  // Debug: Log friend data to see if profileImageUrl is present
+                  if (__DEV__) {
+                    console.log('Friend data:', {
+                      username: friend.username,
+                      hasProfileImage: !!friend.profileImageUrl,
+                      profileImageUrl: friend.profileImageUrl,
+                    });
+                  }
+                  
+                  return (
+                    <View key={friend.userId} style={styles.friendCard}>
+                      <View style={styles.friendAvatar}>
+                        {friend.profileImageUrl ? (
+                          <Image
+                            key={friend.profileImageUrl} // Force re-render when URL changes
+                            source={{ uri: friend.profileImageUrl }}
+                            style={styles.friendAvatarImage}
+                            resizeMode="cover"
+                            onError={(e) => {
+                              if (__DEV__) {
+                                console.error('Image load error for', friend.username, ':', e.nativeEvent.error);
+                              }
+                            }}
+                            onLoad={() => {
+                              if (__DEV__) {
+                                console.log('Image loaded successfully for', friend.username);
+                              }
+                            }}
+                          />
+                        ) : (
+                          <User size={24} color={COLORS.red600} />
+                        )}
+                      </View>
                     <View style={styles.friendInfo}>
                       <Text style={styles.friendName}>{friend.username}</Text>
                       <View style={styles.onlineIndicator}>
@@ -426,7 +474,8 @@ export default function FriendScreen() {
                       <UserCheck size={20} color={COLORS.stone400} />
                     </Pressable>
                   </View>
-                ))
+                  );
+                })
               )}
             </View>
           </View>
@@ -619,9 +668,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.stone100,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   avatarEmoji: {
     fontSize: 24,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   friendAvatar: {
     width: 48,
@@ -630,6 +684,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.red50,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  friendAvatarImage: {
+    width: '100%',
+    height: '100%',
   },
   friendInfo: {
     flex: 1,

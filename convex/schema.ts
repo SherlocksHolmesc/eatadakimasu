@@ -8,6 +8,9 @@ export default defineSchema({
     email: v.string(),
     passwordHash: v.optional(v.string()), // Optional for OAuth users
     googleId: v.optional(v.string()), // Google OAuth ID
+    bio: v.optional(v.string()), // User bio
+    location: v.optional(v.string()), // User location
+    profileImageId: v.optional(v.id("_storage")), // Profile image storage ID
     createdAt: v.number(),
   })
     .index("by_email", ["email"])

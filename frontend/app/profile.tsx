@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   Pressable,
   Platform,
   Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import Animated, {
   FadeInDown,
   useSharedValue,
@@ -25,6 +28,9 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BottomNavBar } from '../components/BottomNavBar';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -87,23 +93,172 @@ export default function ProfileScreen() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'home' | 'friends' | 'profile'>('profile');
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Mock User State
+  // Get current user from Convex
+  const currentUser = useQuery(
+    api.friends.getCurrentUser,
+    userId ? { userId: userId as any } : 'skip'
+  );
+
+  const updateProfileMutation = useMutation(api.friends.updateProfile);
+  const generateUploadUrlMutation = useMutation(api.friends.generateUploadUrl);
+
+  useEffect(() => {
+    const loadUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setUserId(id);
+    };
+    loadUserId();
+  }, []);
+
+  const pickImage = async () => {
+    // Request permissions
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please grant permission to access your photo library.');
+        return;
+      }
+    }
+
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      await uploadImage(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (imageUri: string) => {
+    if (!userId) return;
+
+    try {
+      setUploadingImage(true);
+
+      // Generate upload URL from Convex
+      const uploadUrl = await generateUploadUrlMutation();
+
+      // Convert image to blob
+      const response = await fetch(imageUri);
+      const blob = await response.blob();
+
+      // Upload to Convex
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': blob.type },
+        body: blob,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      // Convex returns the storage ID as JSON: {"storageId": "..."}
+      const result = await uploadResponse.json() as { storageId: string };
+      const storageId = result.storageId;
+
+      if (!storageId) {
+        throw new Error('No storage ID returned from upload');
+      }
+
+      // Update profile with new image
+      const updated = await updateProfileMutation({
+        userId: userId as any,
+        profileImageId: storageId as any, // Cast to Convex storage ID type
+      });
+
+      // Update local state
+      setUser(prev => ({
+        ...prev,
+        profileImageUrl: updated.profileImageUrl,
+      }));
+      setEditForm(prev => ({
+        ...prev,
+        profileImageUrl: updated.profileImageUrl,
+      }));
+
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error: any) {
+      Alert.alert('Upload Error', error.message || 'Failed to upload image');
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // User State - initialized with Convex data
   const [user, setUser] = useState({
-    name: 'Takumi Fujiwara',
-    handle: '@tofu_delivery',
-    uid: 'UID-8392-XZ',
+    name: currentUser?.username || 'User',
+    handle: `@${currentUser?.username || 'user'}`,
+    uid: currentUser?.formattedUid || currentUser?.uid || 'Loading...',
     avatar: '🚗',
-    location: 'Gunma, Japan',
-    bio: 'Always looking for the fastest route to dinner.',
+    location: currentUser?.location || '',
+    bio: currentUser?.bio || '',
+    profileImageUrl: currentUser?.profileImageUrl || null,
   });
+
+  // Update user when currentUser changes
+  useEffect(() => {
+    if (currentUser) {
+      setUser(prev => ({
+        ...prev,
+        name: currentUser.username,
+        handle: `@${currentUser.username}`,
+        uid: currentUser.formattedUid || currentUser.uid,
+        location: currentUser.location || '',
+        bio: currentUser.bio || '',
+        profileImageUrl: currentUser.profileImageUrl || null,
+      }));
+    }
+  }, [currentUser]);
 
   // Edit State
   const [editForm, setEditForm] = useState(user);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  const handleSave = () => {
-    setUser(editForm);
-    setIsEditing(false);
+  // Update editForm when user changes
+  useEffect(() => {
+    setEditForm(user);
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!userId) return;
+
+    try {
+      const updated = await updateProfileMutation({
+        userId: userId as any,
+        bio: editForm.bio || undefined,
+        location: editForm.location || undefined,
+      });
+      
+      // Update local state with updated data
+      setUser(prev => ({
+        ...prev,
+        bio: updated.bio,
+        location: updated.location,
+        profileImageUrl: updated.profileImageUrl,
+      }));
+      setIsEditing(false);
+      
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update profile');
+      if (Platform.OS !== 'web') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    }
   };
 
   const handleTabChange = (tab: 'home' | 'friends' | 'profile') => {
@@ -149,40 +304,47 @@ export default function ProfileScreen() {
           >
             {/* Avatar Edit */}
             <View style={styles.avatarEditContainer}>
-              <View style={styles.avatarEdit}>
-                <Text style={styles.avatarEditEmoji}>{editForm.avatar}</Text>
-                <View style={styles.cameraButton}>
-                  <Camera size={16} color={COLORS.white} />
+              <Pressable
+                onPress={pickImage}
+                disabled={uploadingImage}
+                style={styles.avatarEditPressable}
+              >
+                <View style={styles.avatarEdit}>
+                  {uploadingImage ? (
+                    <ActivityIndicator size="large" color={COLORS.stone600} />
+                  ) : editForm.profileImageUrl ? (
+                    <Image
+                      source={{ uri: editForm.profileImageUrl }}
+                      style={styles.avatarEditImage}
+                    />
+                  ) : (
+                    <Text style={styles.avatarEditEmoji}>{editForm.avatar}</Text>
+                  )}
+                  <View style={styles.cameraButton}>
+                    <Camera size={16} color={COLORS.white} />
+                  </View>
                 </View>
-              </View>
-              <Text style={styles.avatarEditHint}>Tap to change avatar</Text>
+              </Pressable>
+              <Text style={styles.avatarEditHint}>
+                {uploadingImage ? 'Uploading...' : 'Tap to change avatar'}
+              </Text>
             </View>
 
             {/* Fields */}
             <View style={styles.editFields}>
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>DISPLAY NAME</Text>
+                <Text style={styles.fieldLabel}>USERNAME</Text>
                 <Input
                   value={editForm.name}
-                  onChangeText={(text) =>
-                    setEditForm({ ...editForm, name: text })
-                  }
-                  style={styles.fieldInput}
+                  editable={false}
+                  style={[styles.fieldInput, { opacity: 0.6 }]}
                 />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>HANDLE</Text>
-                <Input
-                  value={editForm.handle}
-                  onChangeText={(text) =>
-                    setEditForm({ ...editForm, handle: text })
-                  }
-                  style={styles.fieldInput}
-                />
+                <Text style={styles.fieldHint}>Username cannot be changed</Text>
               </View>
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>LOCATION</Text>
                 <Input
+                  placeholder="Enter your location"
                   value={editForm.location}
                   onChangeText={(text) =>
                     setEditForm({ ...editForm, location: text })
@@ -193,6 +355,7 @@ export default function ProfileScreen() {
               <View style={styles.field}>
                 <Text style={styles.fieldLabel}>BIO</Text>
                 <Textarea
+                  placeholder="Tell us about yourself..."
                   value={editForm.bio}
                   onChangeText={(text) =>
                     setEditForm({ ...editForm, bio: text })
@@ -224,7 +387,14 @@ export default function ProfileScreen() {
             <View style={styles.avatarSection}>
               <View style={styles.avatarContainer}>
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarEmoji}>{user.avatar}</Text>
+                  {user.profileImageUrl ? (
+                    <Image
+                      source={{ uri: user.profileImageUrl }}
+                      style={styles.avatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.avatarEmoji}>{user.avatar}</Text>
+                  )}
                 </View>
               </View>
               <Pressable
@@ -245,12 +415,20 @@ export default function ProfileScreen() {
                 <Text style={styles.uidBadgeText}>UID: {user.uid}</Text>
               </View>
 
-              <Text style={styles.userBio}>{user.bio}</Text>
+              {user.bio ? (
+                <Text style={styles.userBio}>{user.bio}</Text>
+              ) : (
+                <Text style={[styles.userBio, { fontStyle: 'italic', opacity: 0.5 }]}>
+                  No bio yet. Add one in edit mode!
+                </Text>
+              )}
 
-              <View style={styles.locationContainer}>
-                <MapPin size={16} color={COLORS.stone400} />
-                <Text style={styles.locationText}>{user.location}</Text>
-              </View>
+              {user.location && (
+                <View style={styles.locationContainer}>
+                  <MapPin size={16} color={COLORS.stone400} />
+                  <Text style={styles.locationText}>{user.location}</Text>
+                </View>
+              )}
             </View>
 
             {/* Stats */}
@@ -388,6 +566,11 @@ const styles = StyleSheet.create({
   },
   avatarEmoji: {
     fontSize: 48,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
   },
   editButton: {
     marginBottom: 16,
@@ -612,6 +795,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.stone400,
   },
+  avatarEditPressable: {
+    alignItems: 'center',
+  },
+  avatarEditImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 64,
+  },
   editFields: {
     gap: 16,
   },
@@ -623,6 +814,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.stone500,
     textTransform: 'uppercase',
+  },
+  fieldHint: {
+    fontSize: 11,
+    color: COLORS.stone400,
+    marginTop: 4,
   },
   fieldInput: {
     backgroundColor: COLORS.white,

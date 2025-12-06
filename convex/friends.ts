@@ -33,11 +33,17 @@ export const getUserByUid = query({
         for (const user of allUsers) {
           const formattedUid = formatUserId(user._id);
           if (formattedUid.toUpperCase() === searchTerm) {
+            // Get profile image URL if exists
+            let profileImageUrl = null;
+            if (user.profileImageId) {
+              profileImageUrl = await ctx.storage.getUrl(user.profileImageId);
+            }
             return {
               userId: user._id,
               username: user.username,
               email: user.email,
               uid: formattedUid,
+              profileImageUrl: profileImageUrl,
             };
           }
         }
@@ -51,11 +57,17 @@ export const getUserByUid = query({
     try {
       const userById = await ctx.db.get(searchTerm as any);
       if (userById && '_id' in userById && 'username' in userById && 'email' in userById) {
+        // Get profile image URL if exists
+        let profileImageUrl = null;
+        if (userById.profileImageId) {
+          profileImageUrl = await ctx.storage.getUrl(userById.profileImageId);
+        }
         return {
           userId: userById._id,
           username: userById.username,
           email: userById.email,
           uid: formatUserId(userById._id),
+          profileImageUrl: profileImageUrl,
         };
       }
     } catch (e) {
@@ -69,11 +81,17 @@ export const getUserByUid = query({
       .first();
 
     if (userByUsername) {
+      // Get profile image URL if exists
+      let profileImageUrl = null;
+      if (userByUsername.profileImageId) {
+        profileImageUrl = await ctx.storage.getUrl(userByUsername.profileImageId);
+      }
       return {
         userId: userByUsername._id,
         username: userByUsername.username,
         email: userByUsername.email,
         uid: formatUserId(userByUsername._id),
+        profileImageUrl: profileImageUrl,
       };
     }
 
@@ -84,11 +102,17 @@ export const getUserByUid = query({
       .first();
 
     if (userByEmail) {
+      // Get profile image URL if exists
+      let profileImageUrl = null;
+      if (userByEmail.profileImageId) {
+        profileImageUrl = await ctx.storage.getUrl(userByEmail.profileImageId);
+      }
       return {
         userId: userByEmail._id,
         username: userByEmail.username,
         email: userByEmail.email,
         uid: formatUserId(userByEmail._id),
+        profileImageUrl: profileImageUrl,
       };
     }
 
@@ -103,10 +127,78 @@ export const getCurrentUser = query({
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
+    // Get profile image URL if exists
+    let profileImageUrl = null;
+    if (user.profileImageId) {
+      profileImageUrl = await ctx.storage.getUrl(user.profileImageId);
+    }
+
     return {
       userId: user._id,
       username: user.username,
       email: user.email,
+      bio: user.bio || '',
+      location: user.location || '',
+      profileImageUrl: profileImageUrl,
+      uid: formatUserId(user._id),
+      formattedUid: formatUserId(user._id),
+    };
+  },
+});
+
+// Generate upload URL for profile image
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Update user profile
+export const updateProfile = mutation({
+  args: {
+    userId: v.id("users"),
+    bio: v.optional(v.string()),
+    location: v.optional(v.string()),
+    profileImageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    const updates: any = {};
+    if (args.bio !== undefined) {
+      updates.bio = args.bio;
+    }
+    if (args.location !== undefined) {
+      updates.location = args.location;
+    }
+    if (args.profileImageId !== undefined) {
+      // Delete old image if exists
+      if (user.profileImageId) {
+        await ctx.storage.delete(user.profileImageId);
+      }
+      updates.profileImageId = args.profileImageId;
+    }
+
+    await ctx.db.patch(args.userId, updates);
+
+    // Get profile image URL if exists
+    let profileImageUrl = null;
+    const finalImageId = args.profileImageId !== undefined ? args.profileImageId : user.profileImageId;
+    if (finalImageId) {
+      profileImageUrl = await ctx.storage.getUrl(finalImageId);
+    }
+
+    return {
+      userId: user._id,
+      username: user.username,
+      email: user.email,
+      bio: updates.bio !== undefined ? updates.bio : user.bio || '',
+      location: updates.location !== undefined ? updates.location : user.location || '',
+      profileImageUrl: profileImageUrl,
       uid: formatUserId(user._id),
       formattedUid: formatUserId(user._id),
     };
@@ -261,11 +353,18 @@ export const getIncomingFriendRequests = query({
         const fromUser = await ctx.db.get(request.fromUserId);
         if (!fromUser) return null;
 
+        // Get profile image URL if exists
+        let profileImageUrl = null;
+        if (fromUser.profileImageId) {
+          profileImageUrl = await ctx.storage.getUrl(fromUser.profileImageId);
+        }
+
         return {
           requestId: request._id,
           fromUserId: request.fromUserId,
           fromUsername: fromUser.username,
           fromEmail: fromUser.email,
+          fromProfileImageUrl: profileImageUrl,
           createdAt: request.createdAt,
         };
       })
@@ -302,11 +401,18 @@ export const getFriends = query({
         const user = await ctx.db.get(friendId);
         if (!user) return null;
 
+        // Get profile image URL if exists
+        let profileImageUrl = null;
+        if (user.profileImageId) {
+          profileImageUrl = await ctx.storage.getUrl(user.profileImageId);
+        }
+
         return {
           userId: user._id,
           username: user.username,
           email: user.email,
           uid: formatUserId(user._id),
+          profileImageUrl: profileImageUrl,
         };
       })
     );
