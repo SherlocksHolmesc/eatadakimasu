@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share, Platform, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Share, Platform, Pressable, Modal } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
@@ -22,6 +22,7 @@ export default function RoomWaitingScreen() {
   const { roomCode, roomId } = params;
 
   const [currentUserId, setCurrentUserId] = React.useState<string>('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = React.useState(false);
 
   // Real-time query - automatically updates when members join/leave
   const roomData = useQuery(api.rooms.getRoom, 
@@ -159,23 +160,14 @@ export default function RoomWaitingScreen() {
     }
   };
 
-  const handleLeave = async () => {
-    // Use window.confirm for web, Alert.alert for native
-    const confirmLeave = Platform.OS === 'web' 
-      ? (globalThis as any).window?.confirm('Are you sure you want to leave the room?') || false
-      : await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            'Leave Room',
-            'Are you sure you want to leave?',
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Leave', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
+  const handleLeave = () => {
+    // Show popup confirmation instead of native alert
+    setShowLeaveConfirm(true);
+  };
 
-    if (!confirmLeave) return;
-
+  const confirmLeaveRoom = async () => {
+    setShowLeaveConfirm(false);
+    
     try {
       // Only call leaveRoom if we have the required data
       if (roomId && currentUserId) {
@@ -190,6 +182,10 @@ export default function RoomWaitingScreen() {
       // Still navigate back even if there's an error
       router.back();
     }
+  };
+
+  const cancelLeave = () => {
+    setShowLeaveConfirm(false);
   };
 
   if (!roomData) {
@@ -315,6 +311,42 @@ export default function RoomWaitingScreen() {
           </Animated.View>
         )}
       </Animated.View>
+
+      {/* Leave Confirmation Modal */}
+      <Modal
+        visible={showLeaveConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelLeave}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            style={styles.confirmModal}
+            entering={FadeInDown.springify()}
+          >
+            <Text style={styles.confirmTitle}>Leave Room?</Text>
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to leave this room?
+            </Text>
+            
+            <View style={styles.confirmButtonsContainer}>
+              <Pressable 
+                style={styles.cancelButton}
+                onPress={cancelLeave}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              
+              <Pressable 
+                style={styles.leaveButton}
+                onPress={confirmLeaveRoom}
+              >
+                <Text style={styles.leaveButtonText}>Leave</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -500,6 +532,72 @@ const styles = StyleSheet.create({
     color: COLORS.darkGray,
     opacity: 0.6,
     fontStyle: 'italic',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmModal: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: 28,
+    width: '85%',
+    maxWidth: 380,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  confirmTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: COLORS.darkGray,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmMessage: {
+    fontSize: 16,
+    color: COLORS.darkGray,
+    opacity: 0.7,
+    marginBottom: 28,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  confirmButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: COLORS.lightGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+  },
+  leaveButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 16,
+    backgroundColor: COLORS.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  leaveButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.white,
   },
 });
 
