@@ -72,7 +72,7 @@ export default function PreferencesScreen() {
     if (selectedCuisines.length === 0) {
       const message = 'Please select at least one cuisine';
       if (Platform.OS === 'web') {
-        alert(message);
+        (globalThis as any).alert(message);
       } else {
         Alert.alert('Error', message);
       }
@@ -134,7 +134,7 @@ export default function PreferencesScreen() {
       console.error('Save preferences error:', error);
       const message = 'Failed to save preferences. Please try again.';
       if (Platform.OS === 'web') {
-        alert(message);
+        (globalThis as any).alert(message);
       } else {
         Alert.alert('Error', message);
       }

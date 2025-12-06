@@ -80,7 +80,7 @@ export default function SwipeScreen() {
         }),
       });
 
-      const data = await response.json();
+      const data = await response.json() as { restaurants?: Restaurant[] };
       setRestaurants(data.restaurants || []);
     } catch (error) {
       console.error('Fetch restaurants error:', error);

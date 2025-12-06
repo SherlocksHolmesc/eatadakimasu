@@ -107,7 +107,7 @@ export default function RoomWaitingScreen() {
     
     if (!allReady) {
       if (Platform.OS === 'web') {
-        alert('Wait for everyone to be ready!');
+        (globalThis as any).alert('Wait for everyone to be ready!');
       } else {
         Alert.alert('Not Ready', 'Wait for everyone to be ready!');
       }
@@ -136,14 +136,18 @@ export default function RoomWaitingScreen() {
       });
     } catch (error: any) {
       console.error('Start session error:', error);
-      alert('Error starting session: ' + error.message);
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert('Error starting session: ' + error.message);
+      } else {
+        Alert.alert('Error', 'Error starting session: ' + error.message);
+      }
     }
   };
 
   const handleLeave = async () => {
     // Use window.confirm for web, Alert.alert for native
     const confirmLeave = Platform.OS === 'web' 
-      ? window.confirm('Are you sure you want to leave the room?')
+      ? (globalThis as any).window?.confirm('Are you sure you want to leave the room?') || false
       : await new Promise<boolean>((resolve) => {
           Alert.alert(
             'Leave Room',

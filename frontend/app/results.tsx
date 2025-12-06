@@ -40,7 +40,7 @@ export default function ResultsScreen() {
   const fetchResults = async () => {
     try {
       const response = await fetch(`${API_URL}/api/results/${roomCode}?mode=${mode}`);
-      const data = await response.json();
+      const data = await response.json() as { results?: Restaurant[] };
       setResults(data.results || []);
     } catch (error) {
       console.error('Fetch results error:', error);
