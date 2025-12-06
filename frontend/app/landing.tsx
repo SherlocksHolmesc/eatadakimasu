@@ -70,7 +70,7 @@ export default function LandingScreen() {
   const router = useRouter();
 
   const handleSolo = () => {
-    router.push('/group/location?mode=solo');
+    router.push('/solo-setup');
   };
 
   const handleGroup = () => {

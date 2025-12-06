@@ -114,11 +114,12 @@ export default function SwipeScreen() {
     const restaurant = restaurants[currentIndex];
 
     try {
+      // Save vote to backend API (for both solo and group)
       await fetch(`${API_URL}/api/votes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          room_code: params.roomCode,
+          room_code: params.roomCode || '',
           user_id: userId,
           restaurant_id: restaurant.id,
           vote: vote ? 'yes' : 'no',
@@ -134,10 +135,11 @@ export default function SwipeScreen() {
       }
 
       if (currentIndex === restaurants.length - 1) {
+        // Navigate to results - both solo and group mode
         router.push({
           pathname: '/results',
           params: {
-            roomCode: params.roomCode,
+            roomCode: params.roomCode || '',
             mode: params.mode,
           },
         });

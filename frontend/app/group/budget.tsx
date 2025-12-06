@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -13,7 +14,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { ArrowLeft } from 'lucide-react-native';
 import Slider from '@react-native-community/slider';
 import { useMutation } from 'convex/react';
-import { api } from '../../convex/_generated/api';
+import { api } from '../../../convex/_generated/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
@@ -51,8 +52,10 @@ export default function BudgetScreen() {
   }, []);
 
   const handleContinue = async () => {
+    // Both solo and group mode need roomId and userId
     if (!params.roomId || !currentUserId) {
       console.error('Missing roomId or userId');
+      Alert.alert('Error', 'Missing required information. Please try again.');
       return;
     }
 
@@ -97,7 +100,7 @@ export default function BudgetScreen() {
             params: {
               roomCode: params.roomCode,
               roomId: params.roomId,
-              mode: params.mode,
+              mode: 'solo',
               location: params.address,
               cuisines: preferences.join(','),
               minBudget: minBudget.toString(),

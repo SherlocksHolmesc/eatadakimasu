@@ -57,6 +57,7 @@ export default function PreferencesScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccessfully, setSavedSuccessfully] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [isLoadingUserId, setIsLoadingUserId] = useState(true);
 
   const updateMemberPreferencesMutation = useMutation(api.rooms.updateMemberPreferences);
   
@@ -65,11 +66,51 @@ export default function PreferencesScreen() {
 
   React.useEffect(() => {
     const getUserId = async () => {
-      const id = await AsyncStorage.getItem('userId');
-      setCurrentUserId(id || '');
+      try {
+        const id = await AsyncStorage.getItem('userId');
+        console.log('Preferences: Loaded userId:', id);
+        setCurrentUserId(id || '');
+        
+        // For solo mode, if roomId is missing, try to get it from AsyncStorage
+        if (mode === 'solo' && !roomId) {
+          console.log('Solo mode: roomId missing from params, checking AsyncStorage...');
+          const storedRoomId = await AsyncStorage.getItem('soloRoomId');
+          const storedRoomCode = await AsyncStorage.getItem('soloRoomCode');
+          
+          if (storedRoomId && storedRoomCode) {
+            console.log('Solo mode: Found roomId in AsyncStorage:', storedRoomId);
+            // Replace current route with correct params
+            router.replace({
+              pathname: '/preferences',
+              params: {
+                roomId: storedRoomId,
+                roomCode: storedRoomCode,
+                mode: 'solo',
+              },
+            });
+          } else {
+            console.warn('Solo mode: No roomId found in AsyncStorage either');
+            // If no roomId found, redirect back to solo-setup to create a new room
+            Alert.alert('Error', 'Room information is missing. Please try again.');
+            router.replace('/solo-setup');
+          }
+        }
+      } catch (error) {
+        console.error('Error loading userId:', error);
+      } finally {
+        setIsLoadingUserId(false);
+      }
     };
     getUserId();
   }, []);
+
+  // Debug: Log params and userId
+  React.useEffect(() => {
+    console.log('Preferences: roomCode:', roomCode);
+    console.log('Preferences: roomId:', roomId);
+    console.log('Preferences: mode:', mode);
+    console.log('Preferences: currentUserId:', currentUserId);
+  }, [roomCode, roomId, mode, currentUserId]);
 
   const toggleCuisine = (cuisineId: string) => {
     setHasUserInteracted(true); // Mark that user has started selecting
@@ -81,6 +122,16 @@ export default function PreferencesScreen() {
   };
 
   const handleNext = async () => {
+    if (!location.trim()) {
+      const message = 'Please enter a location';
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
+      return;
+    }
+
     if (selectedCuisines.length === 0) {
       const message = 'Please select at least one cuisine';
       if (Platform.OS === 'web') {
@@ -91,31 +142,86 @@ export default function PreferencesScreen() {
       return;
     }
 
+    // Both solo and group mode need roomId and userId to save to Convex
+    console.log('handleNext: Checking requirements...');
+    console.log('handleNext: roomId:', roomId, 'type:', typeof roomId);
+    console.log('handleNext: currentUserId:', currentUserId, 'type:', typeof currentUserId);
+    console.log('handleNext: mode:', mode);
+    
+    if (!roomId) {
+      console.error('Missing roomId. Params:', { roomCode, roomId, mode });
+      const message = 'Room ID is missing. Please try again.';
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
+      return;
+    }
+
+    // If userId is still loading, wait a bit
+    if (isLoadingUserId) {
+      console.log('UserId is still loading, waiting...');
+      const id = await AsyncStorage.getItem('userId');
+      setCurrentUserId(id || '');
+      setIsLoadingUserId(false);
+    }
+
+    if (!currentUserId) {
+      console.error('Missing userId. Attempting to load...');
+      // Try to load userId one more time
+      const id = await AsyncStorage.getItem('userId');
+      if (!id) {
+        const message = 'Please log in to continue';
+        if (Platform.OS === 'web') {
+          (globalThis as any).alert(message);
+        } else {
+          Alert.alert('Error', message);
+        }
+        router.push('/auth/login');
+        return;
+      }
+      setCurrentUserId(id);
+    }
+
+    // Final check
     if (!roomId || !currentUserId) {
-      console.error('Missing roomId or userId');
+      console.error('Final check failed. roomId:', roomId, 'userId:', currentUserId);
+      const message = 'Missing required information. Please try again.';
+      if (Platform.OS === 'web') {
+        (globalThis as any).alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
       return;
     }
 
     setIsSaving(true);
     try {
       console.log('Saving preferences to Convex...');
+      console.log('Saving with:', {
+        roomId,
+        userId: currentUserId,
+        cuisines: selectedCuisines,
+        priceRange: `${minBudget}-${maxBudget}`,
+      });
+      
+      // Save preferences to Convex - this is required for both solo and group
       await updateMemberPreferencesMutation({
         roomId: roomId as any,
         userId: currentUserId as any,
         preferences: {
           cuisines: selectedCuisines,
-          distance: maxBudget, // Using as distance for now
+          distance: 10, // Default distance
           priceRange: `${minBudget}-${maxBudget}`,
         },
       });
 
-      console.log('Preferences saved successfully!');
+      console.log('✅ Preferences saved successfully to Convex!');
       setSavedSuccessfully(true);
       
-      // For group mode, go to waiting screen
-      // For solo mode, go directly to swipe
       if (mode === 'group') {
-        // Show success message briefly before going to waiting screen
+        // Group mode - show success message briefly before going to waiting screen
         setTimeout(() => {
           router.push({
             pathname: '/preferences-waiting',
@@ -127,20 +233,23 @@ export default function PreferencesScreen() {
           });
         }, 1500);
       } else {
-        // Solo mode - go directly to swipe
+        // Solo mode - save is complete, go directly to swipe
+        // No room code needed for solo, but we pass it for consistency
+        console.log('Solo mode: Navigating to swipe...');
         setTimeout(() => {
           router.push({
             pathname: '/swipe',
             params: {
-              roomCode,
-              roomId,
-              mode,
+              roomCode: roomCode || '', // Optional for solo
+              roomId: roomId || '', // Keep for consistency
+              mode: 'solo',
+              location: location,
               cuisines: selectedCuisines.join(','),
-              minBudget,
-              maxBudget,
+              minBudget: minBudget.toString(),
+              maxBudget: maxBudget.toString(),
             },
           });
-        }, 1500);
+        }, 1000); // Shorter delay for solo since no waiting needed
       }
     } catch (error: any) {
       console.error('Save preferences error:', error);
@@ -240,36 +349,62 @@ export default function PreferencesScreen() {
           <Text style={styles.sectionLabel}>Budget</Text>
           <View style={styles.budgetContainer}>
             <View style={styles.budgetRow}>
-              <Text style={styles.budgetText}>Min: ${minBudget}</Text>
-              <Text style={styles.budgetText}>Max: ${maxBudget}</Text>
+              <View style={styles.budgetItem}>
+                <Text style={styles.budgetLabel}>Minimum</Text>
+                <Text style={styles.budgetValue}>RM {minBudget}</Text>
+              </View>
+              <View style={styles.budgetItem}>
+                <Text style={styles.budgetLabel}>Maximum</Text>
+                <Text style={styles.budgetValue}>RM {maxBudget}</Text>
+              </View>
             </View>
+
             <View style={styles.sliderContainer}>
-              <Text style={styles.sliderLabel}>Min</Text>
+              <Text style={styles.sliderLabel}>Minimum Budget</Text>
               <Slider
                 style={styles.slider}
                 minimumValue={5}
-                maximumValue={maxBudget - 5}
+                maximumValue={195}
                 step={5}
                 value={minBudget}
-                onValueChange={setMinBudget}
+                onValueChange={(value) => {
+                  // Only update min, don't touch max
+                  // If min would exceed max, cap it at max - 5
+                  const newMin = value >= maxBudget ? maxBudget - 5 : value;
+                  setMinBudget(Math.max(5, newMin));
+                }}
                 minimumTrackTintColor={COLORS.accent}
                 maximumTrackTintColor={COLORS.lightGray}
                 thumbTintColor={COLORS.accent}
               />
+              <View style={styles.sliderValues}>
+                <Text style={styles.sliderValueText}>RM 5</Text>
+                <Text style={styles.sliderValueText}>RM 195</Text>
+              </View>
             </View>
+
             <View style={styles.sliderContainer}>
-              <Text style={styles.sliderLabel}>Max</Text>
+              <Text style={styles.sliderLabel}>Maximum Budget</Text>
               <Slider
                 style={styles.slider}
-                minimumValue={minBudget + 5}
-                maximumValue={100}
+                minimumValue={10}
+                maximumValue={200}
                 step={5}
                 value={maxBudget}
-                onValueChange={setMaxBudget}
+                onValueChange={(value) => {
+                  // Only update max, don't touch min
+                  // If max would go below min, cap it at min + 5
+                  const newMax = value <= minBudget ? minBudget + 5 : value;
+                  setMaxBudget(Math.min(200, newMax));
+                }}
                 minimumTrackTintColor={COLORS.accent}
                 maximumTrackTintColor={COLORS.lightGray}
                 thumbTintColor={COLORS.accent}
               />
+              <View style={styles.sliderValues}>
+                <Text style={styles.sliderValueText}>RM 10</Text>
+                <Text style={styles.sliderValueText}>RM 200</Text>
+              </View>
             </View>
           </View>
         </Animated.View>
@@ -422,26 +557,47 @@ const styles = StyleSheet.create({
   budgetRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 32,
   },
-  budgetText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.darkGray,
+  budgetItem: {
+    flex: 1,
+    alignItems: 'center',
   },
-  sliderContainer: {
-    marginBottom: 16,
-  },
-  sliderLabel: {
-    fontSize: 13,
+  budgetLabel: {
+    fontSize: 14,
     fontWeight: '600',
     color: COLORS.darkGray,
     opacity: 0.6,
     marginBottom: 8,
   },
+  budgetValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.accent,
+  },
+  sliderContainer: {
+    marginBottom: 32,
+  },
+  sliderLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.darkGray,
+    marginBottom: 16,
+  },
   slider: {
     width: '100%',
     height: 40,
+  },
+  sliderValues: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  sliderValueText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.darkGray,
+    opacity: 0.5,
   },
   footerSpacer: {
     height: 120,

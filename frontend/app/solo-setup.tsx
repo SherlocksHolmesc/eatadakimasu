@@ -1,41 +1,75 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
-
-const API_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL || process.env.EXPO_PUBLIC_BACKEND_URL || '';
+import { useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SoloSetupScreen() {
   const router = useRouter();
   const [isCreating, setIsCreating] = React.useState(false);
+  const [userId, setUserId] = React.useState<string | null>(null);
+
+  const createRoomMutation = useMutation(api.rooms.createRoom);
+
+  useEffect(() => {
+    const getUserId = async () => {
+      const id = await AsyncStorage.getItem('userId');
+      setUserId(id);
+    };
+    getUserId();
+  }, []);
 
   const startSolo = async () => {
+    if (!userId) {
+      router.push('/auth/login');
+      return;
+    }
+
     setIsCreating(true);
     try {
-      const response = await fetch(`${API_URL}/api/rooms/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'solo' }),
+      console.log('Solo setup: Creating room with userId:', userId);
+      const result = await createRoomMutation({
+        userId: userId as any,
+        mode: 'solo',
       });
       
-      const data = await response.json() as { room_code?: string };
+      console.log('Solo setup: Room created:', result);
+      console.log('Solo setup: roomCode:', result?.roomCode);
+      console.log('Solo setup: roomId:', result?.roomId);
       
-      if (data.room_code) {
-        router.push({
-          pathname: '/preferences',
-          params: { roomCode: data.room_code, mode: 'solo' }
-        });
+      // Validate result
+      if (!result || !result.roomId || !result.roomCode) {
+        console.error('Invalid room creation result:', result);
+        Alert.alert('Error', 'Failed to create room. Please try again.');
+        return;
       }
-    } catch (error) {
+      
+      // Store roomId in AsyncStorage as backup
+      await AsyncStorage.setItem('soloRoomId', result.roomId.toString());
+      await AsyncStorage.setItem('soloRoomCode', result.roomCode);
+      
+      router.push({
+        pathname: '/group/location',
+        params: { 
+          roomCode: result.roomCode, 
+          roomId: result.roomId.toString(), // Ensure it's a string
+          mode: 'solo' 
+        }
+      });
+    } catch (error: any) {
       console.error('Create solo room error:', error);
+      Alert.alert('Error', error.message || 'Failed to create room. Please try again.');
     } finally {
       setIsCreating(false);
     }
   };
 
-  React.useEffect(() => {
-    startSolo();
-  }, []);
+  useEffect(() => {
+    if (userId) {
+      startSolo();
+    }
+  }, [userId]);
 
   return (
     <View style={styles.container}>
